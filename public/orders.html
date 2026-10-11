@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的订单 - GPT 充值中心</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    main { min-height: calc(100vh - 64px - 90px); }
+    .list { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+    .row-o { display: flex; align-items: center; gap: 16px; padding: 18px 22px; text-decoration: none; transition: background .15s; }
+    .row-o + .row-o { border-top: 1px solid var(--line); }
+    .row-o:hover { background: var(--soft); }
+    .row-o .main { flex: 1; min-width: 0; }
+    .row-o .top { display: flex; align-items: center; gap: 10px; }
+    .row-o .pn { font-size: 17px; font-weight: 600; }
+    .row-o .meta { margin-top: 4px; font-size: 13px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+    .row-o .meta code { font-size: 13px; }
+    .row-o .amt { font-size: 17px; font-weight: 600; white-space: nowrap; }
+    .row-o .chev { color: var(--muted); font-size: 20px; line-height: 1; }
+    .empty { text-align: center; padding: 56px 24px; }
+    .empty svg { color: var(--muted); }
+    .empty h3 { margin: 14px 0 6px; font-size: 18px; font-weight: 600; }
+    .empty p { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+    .note { max-width: 760px; margin: 16px auto 0; text-align: center; color: var(--muted); font-size: 13px; }
+    @media (max-width: 600px) {
+      .row-o { padding: 14px 16px; gap: 10px; }
+      .row-o .pn, .row-o .amt { font-size: 15px; }
+      .row-o .meta .t { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg"></div>
+
+<header class="topnav" id="topnav">
+  <div class="container">
+    <a class="logo" href="/">GPT 充值中心</a>
+    <nav>
+      <a href="/">套餐</a>
+      <a href="/orders.html" class="active">我的订单</a>
+      <a href="/#faq">常见问题</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section class="page-title">
+    <h1>我的订单</h1>
+    <p>查看在本浏览器下过的订单与充值进度</p>
+  </section>
+
+  <div class="list" id="list"><div class="empty"><span class="spinner"></span></div></div>
+  <p class="note">订单记录仅保存在当前浏览器。更换设备或清除浏览器数据后，请使用下单时保存的订单链接查看。</p>
+</main>
+
+<footer class="foot">本站为第三方充值服务，与 OpenAI 无关</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
+const shortName = (n) => n.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || n;
+const STATUS = {
+  PENDING_PAYMENT: '待支付', PAID: '待填写 Token', QUEUED: '充值中', REDEEMING: '充值中', MANUAL_REVIEW: '处理中',
+  SUCCESS: '充值成功', FAILED: '充值失败', EXPIRED: '已过期', REFUNDED: '已退款',
+};
+const BUSY = ['PENDING_PAYMENT', 'QUEUED', 'REDEEMING', 'MANUAL_REVIEW'];
+
+let recent = [];
+try { recent = JSON.parse(localStorage.getItem('orders') || '[]'); } catch {}
+
+const EMPTY = `<div class="empty">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7l2-4z"/><path d="M4 7h16M9 11a3 3 0 0 0 6 0"/></svg>
+  <h3>还没有订单</h3><p>选择套餐并完成支付后，订单会显示在这里</p>
+  <a class="btn" href="/">去选择套餐</a></div>`;
+
+async function load() {
+  if (!recent.length) return ($('#list').innerHTML = EMPTY);
+  const rows = await Promise.all(recent.map(async (o) => {
+    try {
+      const r = await fetch(`/api/orders/${encodeURIComponent(o.no)}?key=${encodeURIComponent(o.key)}`);
+      return r.ok ? { ...o, d: await r.json() } : null;
+    } catch { return { ...o, d: null }; }
+  }));
+  const list = rows.filter(Boolean);
+  if (!list.length) return ($('#list').innerHTML = EMPTY);
+
+  $('#list').innerHTML = list.map(({ no, key, t, plan, d }) => {
+    const status = d?.status;
+    let label = STATUS[status] || '查看';
+    if (status === 'PENDING_PAYMENT' && d.expire_at < Date.now()) label = '已过期';
+    if (status === 'FAILED' && d.can_submit_token) label = '待重新提交 Token';
+    const cls = status === 'FAILED' && d.can_submit_token ? 's-PAID' : `s-${status}`;
+    return `<a class="row-o" href="/order.html?no=${encodeURIComponent(no)}&key=${encodeURIComponent(key)}">
+      <div class="main">
+        <div class="top"><span class="pn">${esc(d ? shortName(d.plan_name) : plan || '订单')}</span><span class="badge ${cls}">${label}</span></div>
+        <div class="meta"><code>${esc(no)}</code><span class="t">${new Date(d?.created_at || t).toLocaleString()}</span></div>
+      </div>
+      ${d ? `<span class="amt">¥${yuan(d.amount_cents)}</span>` : ''}
+      <span class="chev">›</span></a>`;
+  }).join('');
+
+  // 有进行中的订单时自动刷新状态
+  if (list.some(({ d }) => d && BUSY.includes(d.status) && !(d.status === 'PENDING_PAYMENT' && d.expire_at < Date.now()))) {
+    setTimeout(load, 5000);
+  }
+}
+
+addEventListener('scroll', () => $('#topnav').classList.toggle('scrolled', scrollY > 8), { passive: true });
+load();
+</script>
+<script src="/support.js" defer></script>
+</body>
+</html>

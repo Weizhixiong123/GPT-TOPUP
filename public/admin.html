@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>充值后台</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    :root { --side: #f9f9f9; --warn-bg: #fdf0d5; --warn-fg: #9a5b00; --low: 3; }
+    @media (prefers-color-scheme: dark) { :root { --side: #171717; --warn-bg: #3d2f12; --warn-fg: #f5c26b; } }
+    body { font-size: 14px; }
+    button { font-size: 14px; }
+
+    /* ---------- 登录 ---------- */
+    .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--side); }
+    .login .box { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 32px 28px; }
+    .login h1 { font-size: 22px; margin: 0 0 4px; }
+    .login p { margin: 0 0 22px; color: var(--muted); }
+    .login input { margin-bottom: 10px; }
+
+    /* ---------- 布局 ---------- */
+    .layout { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+    .side { position: sticky; top: 0; height: 100vh; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 20px 12px 16px; }
+    .side .brand { font-size: 22px; font-weight: 700; padding: 0 12px 22px; letter-spacing: -.01em; }
+    .side nav { display: flex; flex-direction: column; gap: 4px; }
+    .side nav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: var(--text-2); text-decoration: none; font-size: 15px; }
+    .side nav a:hover { background: var(--hover); color: var(--text); }
+    .side nav a.active { background: var(--hover); color: var(--text); font-weight: 600; }
+    .side nav svg { width: 20px; height: 20px; flex: none; }
+    .side nav .dot { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-fg); font-size: 12px; display: grid; place-items: center; font-weight: 600; }
+    .side .user { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 12px; color: var(--text-2); font-size: 14px; }
+    .side .user a { color: var(--text-2); text-decoration: none; margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--line); cursor: pointer; }
+    .side .user a:hover { color: var(--text); }
+
+    .main { padding: 36px 40px 60px; min-width: 0; }
+    .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    .head h1 { font-size: 30px; margin: 0; line-height: 1.2; }
+    .head p { margin: 4px 0 0; color: var(--text-2); font-size: 15px; }
+    .btn-primary { padding: 11px 20px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+    .btn-line { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; }
+    .btn-line:hover, .btn-line.danger:hover { background: var(--soft); }
+    .btn-line.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+    .btn-line:disabled { opacity: .4; }
+
+    /* 数据卡片 */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+    .stat { border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; background: var(--card); }
+    .stat .k { color: var(--text-2); font-size: 14px; }
+    .stat .v { font-size: 28px; font-weight: 700; margin-top: 6px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .stat .v small { font-size: 15px; font-weight: 600; margin-left: 2px; }
+    .stat.warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 6%, var(--card)); cursor: pointer; }
+    .stat.warn .v { color: var(--warn); }
+    .stat.warn .k::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); margin-right: 6px; vertical-align: 1px; }
+
+    /* 表格卡片 */
+    .panel { border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; }
+    .panel + .panel { margin-top: 18px; }
+    .panel-h { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .tbl th { text-align: left; font-weight: 600; color: var(--text); padding: 14px 20px; background: var(--soft); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .tbl td { padding: 16px 20px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .tbl tr:last-child td { border-bottom: 0; }
+    .tbl tbody tr:hover td { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+    .tbl tr.hl td { background: color-mix(in srgb, var(--warn) 6%, transparent); }
+    .tbl .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tbl .name { font-weight: 600; font-size: 15px; }
+    .tbl .sub { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+    .tbl .ops { display: flex; gap: 8px; white-space: nowrap; }
+    .tbl code { font-size: 12.5px; }
+    .tbl .clip { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+    .empty-row td { text-align: center; color: var(--muted); padding: 40px; }
+
+    /* 库存 */
+    .stock { min-width: 170px; }
+    .stock .t { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .stock .bar { height: 5px; border-radius: 99px; background: var(--soft); margin: 6px 0 5px; overflow: hidden; max-width: 170px; }
+    .stock .bar i { display: block; height: 100%; background: var(--text); border-radius: 99px; }
+    .stock .n { color: var(--text-2); font-size: 12.5px; }
+    .tag-warn { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--warn-bg); color: var(--warn-fg); }
+    .tag-danger { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+
+    /* 开关 */
+    .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--line); cursor: pointer; transition: background .2s; }
+    .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .switch input:checked + span { background: var(--text); }
+    .switch input:checked + span::after { transform: translateX(20px); background: var(--bg); }
+
+    /* 筛选栏 */
+    .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .seg { display: inline-flex; padding: 3px; background: var(--soft); border-radius: 10px; gap: 2px; flex-wrap: wrap; }
+    .seg button { background: transparent; color: var(--text-2); border: 0; padding: 6px 14px; border-radius: 8px; font-size: 14px; }
+    .seg button:hover { background: transparent; color: var(--text); }
+    .seg button.active { background: var(--card); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .seg .cnt { margin-left: 4px; color: var(--warn); font-weight: 600; }
+    .filters input, .filters select { width: auto; padding: 8px 12px; border-radius: 8px; }
+    .filters input { flex: 1; min-width: 200px; max-width: 360px; }
+
+    /* 状态 */
+    .st { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: var(--soft); color: var(--text-2); }
+    .st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .st.ok { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+    .st.run { background: color-mix(in srgb, var(--info) 10%, transparent); color: var(--info); }
+    .st.warn { background: var(--warn-bg); color: var(--warn-fg); }
+    .st.bad { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+
+    /* ---------- 抽屉 ---------- */
+    .mask { position: fixed; inset: 0; background: rgba(0,0,0,.28); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+    .mask.open { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 440px; max-width: 100vw; background: var(--card); z-index: 50; display: flex; flex-direction: column;
+              transform: translateX(100%); visibility: hidden; transition: transform .25s ease, visibility 0s .25s; }
+    .drawer.open { transform: none; visibility: visible; box-shadow: -8px 0 30px rgba(0,0,0,.12); transition: transform .25s ease; }
+    .drawer .dh { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 24px 8px; }
+    .drawer .dh h2 { font-size: 20px; margin: 0; line-height: 1.35; }
+    .drawer .x { background: transparent; color: var(--text-2); padding: 4px; border-radius: 8px; font-size: 22px; line-height: 1; }
+    .drawer .x:hover { background: var(--soft); color: var(--text); }
+    .drawer .db { flex: 1; overflow-y: auto; padding: 12px 24px 24px; }
+    .drawer .df { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); }
+    .drawer .df button { min-width: 96px; padding: 11px 20px; border-radius: 10px; font-weight: 600; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+    .field .help { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+    .field input, .field textarea, .field select { border-radius: 10px; }
+    .prefix { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .prefix span { padding: 12px 16px; background: var(--soft); border-right: 1px solid var(--line); color: var(--text-2); }
+    .prefix input { border: 0; border-radius: 0; }
+    .kv { display: grid; grid-template-columns: 96px 1fr; gap: 10px 12px; font-size: 14px; margin: 8px 0 20px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; word-break: break-all; }
+    .note-warn { background: var(--warn-bg); color: var(--warn-fg); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 18px; }
+    .timeline { list-style: none; margin: 0 0 8px; padding: 0; }
+    .timeline li { position: relative; padding: 0 0 16px 22px; }
+    .timeline li::before { content: ""; position: absolute; left: 4px; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--text-2); }
+    .timeline li::after { content: ""; position: absolute; left: 7.5px; top: 18px; bottom: 0; width: 1px; background: var(--line); }
+    .timeline li:last-child::after { display: none; }
+    .timeline li.warn::before { background: var(--warn); }
+    .timeline li.bad::before { background: var(--danger); }
+    .timeline li.ok::before { background: var(--accent); }
+    .timeline .e { font-weight: 600; }
+    .timeline .tm { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+    .timeline .dt { color: var(--text-2); font-size: 12.5px; margin-top: 2px; word-break: break-all; }
+    .sec-t { font-weight: 600; margin: 4px 0 12px; }
+    .radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+    .radio input { width: auto; margin-top: 4px; }
+    .radio small { display: block; color: var(--muted); }
+
+    .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--primary); color: var(--on-primary); padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: .2s; z-index: 60; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%); }
+    .toast.err { background: var(--danger); color: #fff; }
+
+    @media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { position: static; height: auto; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; }
+      .side .brand { padding: 0 12px 0 4px; font-size: 18px; white-space: nowrap; }
+      .side nav { flex-direction: row; }
+      .side nav a { white-space: nowrap; padding: 8px 10px; }
+      .side nav svg, .side .user span { display: none; }
+      .side .user { margin: 0 0 0 auto; padding: 0 4px; }
+      .main { padding: 20px 16px 40px; }
+      .head h1 { font-size: 24px; }
+      .panel { overflow-x: auto; }
+      .drawer { width: 100vw; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <div class="box">
+    <h1>充值后台</h1>
+    <p>请使用管理员账号登录</p>
+    <input id="u" placeholder="用户名" autocomplete="username">
+    <input id="p" type="password" placeholder="密码" autocomplete="current-password">
+    <button class="block btn-primary" id="loginBtn" style="margin-top:6px">登录</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="layout" id="app" hidden>
+  <aside class="side">
+    <div class="brand">充值后台</div>
+    <nav id="nav">
+      <a href="#overview" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>概览</a>
+      <a href="#orders" data-page="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg>订单<span class="dot" id="navManual" hidden></span></a>
+      <a href="#cards" data-page="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 3 7.5v9L12 21l9-4.5v-9z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>卡密库存</a>
+      <a href="#plans" data-page="plans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>套餐</a>
+    </nav>
+    <div class="user">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span id="who">admin</span><a id="logout">退出登录</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <div><h1 id="pageTitle"></h1><p id="pageSub"></p></div>
+      <div id="pageAction"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <!-- 概览 -->
+    <section data-page="overview" hidden>
+      <div class="panel">
+        <div class="panel-h">待处理事项</div>
+        <table class="tbl"><tbody id="todo"></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-h">库存情况<a href="#plans" style="font-weight:400;color:var(--text-2);font-size:13px">管理套餐 ›</a></div>
+        <table class="tbl"><tbody id="ovStock"></tbody></table>
+      </div>
+    </section>
+
+    <!-- 订单 -->
+    <section data-page="orders" hidden>
+      <div class="filters">
+        <div class="seg" id="oSeg"></div>
+        <input id="oQ" placeholder="订单号 / 邮箱 / 支付流水号 / 卡密">
+      </div>
+      <div class="panel"><table class="tbl" id="oTable"></table></div>
+    </section>
+
+    <!-- 卡密库存 -->
+    <section data-page="cards" hidden>
+      <div class="filters">
+        <select id="cfPlan"></select>
+        <div class="seg" id="cSeg"></div>
+        <input id="cfQ" placeholder="搜索卡密">
+      </div>
+      <div class="panel"><table class="tbl" id="cTable"></table></div>
+    </section>
+
+    <!-- 套餐 -->
+    <section data-page="plans" hidden>
+      <div class="panel"><table class="tbl" id="pTable"></table></div>
+    </section>
+  </main>
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="dh"><h2 id="dTitle"></h2><button class="x" id="dClose" aria-label="关闭">×</button></div>
+  <div class="db" id="dBody"></div>
+  <div class="df" id="dFoot"></div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const yuan = (c) => (c / 100).toFixed(2);
+const time = (t) => (t ? new Date(t).toLocaleString('zh-CN', { hour12: false }) : '-');
+const LOW_STOCK = 3;
+let auth = sessionStorage.getItem('auth');
+let plans = [];
+let stats = null;
+
+const STATUS = {
+  PENDING_PAYMENT: ['待支付', ''], PAID: ['待填 Token', 'run'], QUEUED: ['充值中', 'run'], REDEEMING: ['充值中', 'run'],
+  MANUAL_REVIEW: ['待人工处理', 'warn'], SUCCESS: ['充值成功', 'ok'], FAILED: ['充值失败', 'bad'], EXPIRED: ['已过期', ''], REFUNDED: ['已退款', ''],
+};
+const CARD_STATUS = { AVAILABLE: ['可用', 'ok'], LOCKED: ['已锁定', 'run'], USED: ['已使用', ''], INVALID: ['已作废', 'bad'] };
+const CHANNEL = { wechat: '微信', alipay: '支付宝', mock: '模拟' };
+const EVENT = {
+  CREATED: '创建订单', PAID: '支付成功', TOKEN_SUBMITTED: '提交 Token', CARD_LOCKED: '锁定卡密', SUBMIT_RESULT: '提交上游',
+  SUBMIT_ERROR: '提交上游失败', CARD_INVALID: '卡密无效，已换卡', QUERY_FAILED: '上游返回失败', SUCCESS: '充值成功', FAILED: '充值失败',
+  MANUAL_REVIEW: '转人工', EXPIRED: '订单过期', PAY_CREATE_FAILED: '创建支付失败', PAY_AMOUNT_MISMATCH: '支付金额不一致', WORKER_ERROR: '处理异常',
+  ADMIN_REQUERY: '人工：重新查询', ADMIN_RESUBMIT: '人工：重新提交', ADMIN_MARK_SUCCESS: '人工：确认成功', ADMIN_MARK_FAILED: '人工：确认失败', ADMIN_MARK_REFUNDED: '人工：标记退款',
+};
+const EVENT_TONE = { SUCCESS: 'ok', ADMIN_MARK_SUCCESS: 'ok', MANUAL_REVIEW: 'warn', SUBMIT_ERROR: 'warn', CARD_INVALID: 'warn', PAY_AMOUNT_MISMATCH: 'bad', FAILED: 'bad', QUERY_FAILED: 'bad', WORKER_ERROR: 'bad', ADMIN_MARK_FAILED: 'bad' };
+const st = (s, map = STATUS) => { const [l, c] = map[s] || [s, '']; return `<span class="st ${c}">${esc(l)}</span>`; };
+
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.className = 'toast'), 2200);
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch('/api/admin' + path, {
+    ...opts,
+    headers: { Authorization: 'Basic ' + auth, 'Content-Type': 'application/json' },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const d = await r.json();
+  if (r.status === 401) { showLogin(); throw new Error(d.error); }
+  if (!r.ok) { toast(d.error, true); throw new Error(d.error); }
+  return d;
+}
+
+// ---------- 登录 ----------
+function showLogin() { $('#login').hidden = false; $('#app').hidden = true; }
+async function login() {
+  auth = btoa(unescape(encodeURIComponent($('#u').value + ':' + $('#p').value)));
+  const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Basic ' + auth } });
+  if (r.status === 429) return ($('#loginErr').textContent = (await r.json()).error);
+  if (!r.ok) return ($('#loginErr').textContent = '用户名或密码错误');
+  sessionStorage.setItem('auth', auth);
+  sessionStorage.setItem('who', $('#u').value);
+  start();
+}
+$('#loginBtn').onclick = login;
+// 注意：不能写成 onkeydown = (e) => e.key === 'Enter' && login()
+// 非回车键时会返回 false，浏览器会因此拦截按键，导致密码框打不出字
+$('#p').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') login();
+});
+$('#logout').onclick = () => { sessionStorage.clear(); location.reload(); };
+
+// ---------- 抽屉 ----------
+function openDrawer(title, body, foot = '') {
+  $('#dTitle').innerHTML = title; $('#dBody').innerHTML = body; $('#dFoot').innerHTML = foot;
+  $('#dFoot').hidden = !foot;
+  $('#mask').classList.add('open'); $('#drawer').classList.add('open');
+}
+function closeDrawer() { $('#mask').classList.remove('open'); $('#drawer').classList.remove('open'); }
+$('#mask').onclick = closeDrawer; $('#dClose').onclick = closeDrawer;
+addEventListener('keydown', (e) => e.key === 'Escape' && closeDrawer());
+
+// ---------- 路由 ----------
+const PAGES = {
+  overview: { title: '概览', sub: '今日经营情况与待处理事项', load: loadOverview },
+  orders: { title: '订单', sub: '查看支付与充值进度，处理异常订单', load: loadOrders },
+  cards: { title: '卡密库存', sub: '导入、查询与作废卡密', load: loadCards, action: '<button class="btn-primary" onclick="openImport()">+ 导入卡密</button>' },
+  plans: { title: '套餐', sub: '管理套餐价格、上架状态与库存', load: loadPlans, action: '<button class="btn-primary" onclick="openPlan()">+ 新增套餐</button>' },
+};
+function route() {
+  const page = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : 'overview';
+  const p = PAGES[page];
+  document.querySelectorAll('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.page === page));
+  document.querySelectorAll('main section').forEach((s) => (s.hidden = s.dataset.page !== page));
+  $('#pageTitle').textContent = p.title; $('#pageSub').textContent = p.sub; $('#pageAction').innerHTML = p.action || '';
+  closeDrawer();
+  loadStats(); p.load();
+}
+addEventListener('hashchange', route);
+
+// ---------- 数据卡片 ----------
+async function loadStats() {
+  stats = await api('/stats');
+  const m = Object.fromEntries(stats.byStatus.map((x) => [x.status, x.c]));
+  const processing = (m.QUEUED || 0) + (m.REDEEMING || 0);
+  const manual = m.MANUAL_REVIEW || 0;
+  $('#stats').innerHTML = `
+    <div class="stat"><div class="k">近24h 收款</div><div class="v">¥${Number(yuan(stats.paid24h.s)).toLocaleString('zh-CN')}</div></div>
+    <div class="stat"><div class="k">今日成功</div><div class="v">${stats.successToday}<small>单</small></div></div>
+    <div class="stat"><div class="k">处理中</div><div class="v">${processing}</div></div>
+    <div class="stat ${manual ? 'warn' : ''}" ${manual ? 'onclick="gotoManual()"' : ''}><div class="k">待人工处理</div><div class="v">${manual}</div></div>`;
+  $('#navManual').hidden = !manual; $('#navManual').textContent = manual;
+}
+function gotoManual() { oStatus = 'MANUAL_REVIEW'; if (location.hash === '#orders') loadOrders(); else location.hash = '#orders'; }
+
+// ---------- 概览 ----------
+async function loadOverview() {
+  const [manual, paid] = await Promise.all([api('/orders?status=MANUAL_REVIEW'), api('/orders?status=PAID')]);
+  plans = await api('/plans');
+  const rows = [
+    ...manual.map((o) => `<tr class="hl"><td>${st(o.status)}</td><td><code>${esc(o.order_no)}</code></td><td>${esc(o.plan_name)}</td><td class="sub">${esc(o.message)}</td>
+      <td class="num"><button class="btn-line" onclick="showOrder(${o.id})">处理</button></td></tr>`),
+    ...paid.slice(0, 5).map((o) => `<tr><td>${st(o.status)}</td><td><code>${esc(o.order_no)}</code></td><td>${esc(o.plan_name)}</td><td class="sub">已付款，等待用户填写 Token</td>
+      <td class="num"><button class="btn-line" onclick="showOrder(${o.id})">查看</button></td></tr>`),
+  ];
+  $('#todo').innerHTML = rows.join('') || '<tr class="empty-row"><td>暂无待处理事项 🎉</td></tr>';
+  $('#ovStock').innerHTML = plans.map((p) => `<tr><td><div class="name">${esc(p.name)}</div></td><td>${stockCell(p)}</td>
+    <td class="num"><button class="btn-line" onclick="openImport(${p.id})">导入卡密</button></td></tr>`).join('');
+}
+
+// ---------- 订单 ----------
+let oStatus = '';
+const O_TABS = [['', '全部'], ['MANUAL_REVIEW', '待人工'], ['QUEUED,REDEEMING', '充值中'], ['PAID', '待填 Token'], ['SUCCESS', '成功'], ['FAILED', '失败'], ['PENDING_PAYMENT', '待支付'], ['EXPIRED,REFUNDED', '已关闭']];
+function renderOSeg() {
+  const manual = stats ? (stats.byStatus.find((x) => x.status === 'MANUAL_REVIEW')?.c || 0) : 0;
+  $('#oSeg').innerHTML = O_TABS.map(([v, l]) =>
+    `<button class="${v === oStatus ? 'active' : ''}" data-v="${v}">${l}${v === 'MANUAL_REVIEW' && manual ? `<span class="cnt">${manual}</span>` : ''}</button>`).join('');
+  $('#oSeg').querySelectorAll('button').forEach((b) => (b.onclick = () => { oStatus = b.dataset.v; loadOrders(); }));
+}
+let oTimer;
+$('#oQ').oninput = () => { clearTimeout(oTimer); oTimer = setTimeout(loadOrders, 300); };
+async function loadOrders() {
+  renderOSeg();
+  const rows = await api('/orders?' + new URLSearchParams({ status: oStatus, q: $('#oQ').value.trim() }));
+  renderOSeg();
+  $('#oTable').innerHTML = `<thead><tr><th>订单号</th><th>充值邮箱</th><th>套餐</th><th class="num">金额</th><th>渠道</th><th>状态</th><th>卡密</th><th>下单时间</th><th></th></tr></thead><tbody>` +
+    (rows.map((o) => `<tr class="${o.status === 'MANUAL_REVIEW' ? 'hl' : ''}">
+      <td><code>${esc(o.order_no)}</code></td><td>${o.account_email ? `<span class="clip" title="${esc(o.account_email)}">${esc(o.account_email)}</span>` : '<span class="sub">-</span>'}</td><td>${esc(o.plan_name.replace(/^ChatGPT\s*/, ''))}</td><td class="num">¥${yuan(o.amount_cents)}</td>
+      <td>${CHANNEL[o.pay_channel] || esc(o.pay_channel)}</td><td>${st(o.status)}</td>
+      <td><code class="clip" title="${esc(o.card_code || '')}">${esc(o.card_code || '-')}</code></td><td class="sub">${time(o.created_at)}</td>
+      <td class="num"><button class="btn-line" onclick="showOrder(${o.id})">详情</button></td></tr>`).join('')
+      || '<tr class="empty-row"><td colspan="9">没有符合条件的订单</td></tr>') + '</tbody>';
+}
+
+const ACTIONS = {
+  MANUAL_REVIEW: ['requery', 'resubmit', 'mark_success', 'mark_failed'],
+  REDEEMING: ['mark_success', 'mark_failed'], QUEUED: ['mark_success', 'mark_failed'],
+  PAID: ['mark_refunded'],
+};
+const ACTION_LABEL = { requery: '重新查询结果', resubmit: '重新提交上游', mark_success: '确认成功', mark_failed: '确认失败', mark_refunded: '标记已退款' };
+
+async function showOrder(id) {
+  const { order: o, logs } = await api('/orders/' + id);
+  let acts = ACTIONS[o.status] || [];
+  if (o.status === 'FAILED') acts = o.card_id ? ['mark_success'] : ['mark_refunded'];
+  if (o.status === 'MANUAL_REVIEW' && !o.upstream_task_id) acts = acts.filter((a) => a !== 'requery');
+  const kv = [
+    ['充值邮箱', o.account_email ? esc(o.account_email) : '-'], ['套餐', esc(o.plan_name)], ['金额', `¥${yuan(o.amount_cents)}`], ['支付渠道', CHANNEL[o.pay_channel] || esc(o.pay_channel)],
+    ['支付流水号', `<code>${esc(o.pay_trade_no || '-')}</code>`], ['Token', `<code>${esc(o.token_mask || '-')}</code>`],
+    ['卡密', `<code>${esc(o.card_code || '-')}</code>`], ['上游任务号', `<code>${esc(o.upstream_task_id || '-')}</code>`],
+    ['处理次数', `提交 ${o.submit_attempts} 次 / 查询 ${o.query_attempts} 次`], ['下单时间', time(o.created_at)], ['支付时间', time(o.paid_at)],
+  ];
+  const body = `
+    <div style="margin-bottom:14px">${st(o.status)}</div>
+    ${o.status === 'MANUAL_REVIEW' ? '<div class="note-warn">上游结果不确定，卡密保持锁定。请到上游核实该卡密是否已兑换，再选择下方操作。</div>' : ''}
+    ${o.message ? `<div class="sub" style="margin-bottom:6px">用户看到的提示：${esc(o.message)}</div>` : ''}
+    <dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    <div class="sec-t">处理记录</div>
+    <ul class="timeline">${logs.map((l) => `<li class="${EVENT_TONE[l.event] || ''}"><span class="e">${esc(EVENT[l.event] || l.event)}</span><span class="tm">${time(l.created_at)}</span>
+      ${l.detail ? `<div class="dt">${esc(l.detail)}</div>` : ''}</li>`).join('')}</ul>
+    <div id="failForm" hidden>
+      <div class="sec-t" style="margin-top:12px">确认失败</div>
+      <label class="radio"><input type="radio" name="rel" value="1" checked><span>卡密未被消耗，退回库存<small>上游确认该卡密没有兑换成功</small></span></label>
+      <label class="radio"><input type="radio" name="rel" value="0"><span>作废该卡密<small>卡密已失效或无法确认</small></span></label>
+      <div class="field" style="margin-top:12px"><label>失败原因（会展示给用户）</label><input id="failRemark" placeholder="可留空"></div>
+    </div>`;
+  const foot = acts.map((a) => `<button class="${a === 'mark_success' ? '' : 'btn-line'} ${a === 'mark_failed' ? 'danger' : ''}" onclick="act(${o.id}, '${a}', this)">${ACTION_LABEL[a]}</button>`).join('');
+  openDrawer(`订单 <code style="font-size:15px">${esc(o.order_no)}</code>`, body, foot);
+  $('#dFoot').style.flexWrap = 'wrap';
+}
+
+async function act(id, action, btn) {
+  const body = { action };
+  if (action === 'mark_failed') {
+    const form = $('#failForm');
+    if (form.hidden) { form.hidden = false; form.scrollIntoView({ behavior: 'smooth' }); btn.textContent = '确认提交失败'; return; }
+    body.release_card = document.querySelector('input[name=rel]:checked').value === '1';
+    body.remark = $('#failRemark').value.trim();
+  } else if (!confirm(`确认执行「${ACTION_LABEL[action]}」？`)) return;
+  await api(`/orders/${id}/action`, { method: 'POST', body });
+  toast('操作成功');
+  loadStats(); if (location.hash === '#orders') loadOrders(); else PAGES.overview.load();
+  showOrder(id);
+}
+
+// ---------- 卡密 ----------
+let cStatus = '';
+const C_TABS = [['', '全部'], ['AVAILABLE', '可用'], ['LOCKED', '已锁定'], ['USED', '已使用'], ['INVALID', '已作废']];
+function planOptions(selected, withAll) {
+  return (withAll ? '<option value="">全部套餐</option>' : '') + plans.map((p) => `<option value="${p.id}" ${p.id == selected ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+}
+let cTimer;
+$('#cfQ').oninput = () => { clearTimeout(cTimer); cTimer = setTimeout(loadCards, 300); };
+$('#cfPlan').onchange = () => loadCards();
+async function loadCards() {
+  if (!plans.length) plans = await api('/plans');
+  const sel = $('#cfPlan').value;
+  $('#cfPlan').innerHTML = planOptions(sel, true);
+  $('#cSeg').innerHTML = C_TABS.map(([v, l]) => `<button class="${v === cStatus ? 'active' : ''}" data-v="${v}">${l}</button>`).join('');
+  $('#cSeg').querySelectorAll('button').forEach((b) => (b.onclick = () => { cStatus = b.dataset.v; loadCards(); }));
+  const rows = await api('/cards?' + new URLSearchParams({ plan_id: sel, status: cStatus, q: $('#cfQ').value.trim() }));
+  const pn = Object.fromEntries(plans.map((p) => [p.id, p.name]));
+  $('#cTable').innerHTML = `<thead><tr><th>卡密</th><th>套餐</th><th>状态</th><th>关联订单</th><th>备注</th><th>导入时间</th><th></th></tr></thead><tbody>` +
+    (rows.map((c) => `<tr><td><code>${esc(c.code)}</code></td><td>${esc(pn[c.plan_id] || '')}</td><td>${st(c.status, CARD_STATUS)}</td>
+      <td><code>${esc(c.order_no || '-')}</code></td><td class="sub">${esc(c.note || '')}</td><td class="sub">${time(c.created_at)}</td>
+      <td class="num">${c.status === 'AVAILABLE' ? `<button class="btn-line danger" onclick="voidCard(${c.id})">作废</button>` : ''}</td></tr>`).join('')
+      || '<tr class="empty-row"><td colspan="7">没有符合条件的卡密</td></tr>') + '</tbody>';
+}
+async function voidCard(id) {
+  if (!confirm('确认作废该卡密？作废后不可恢复。')) return;
+  await api(`/cards/${id}/void`, { method: 'POST' }); toast('已作废'); loadCards();
+}
+
+async function openImport(planId) {
+  if (!plans.length) plans = await api('/plans');
+  const p = plans.find((x) => x.id === planId);
+  openDrawer(p ? `导入卡密：${esc(p.name)}` : '导入卡密', `
+    <div class="field"><label>套餐</label><select id="iPlan">${planOptions(planId ?? plans[0]?.id)}</select></div>
+    <div class="field"><label>卡密</label><textarea id="iCodes" rows="12" placeholder="每行一个卡密，也支持逗号分隔"></textarea>
+      <div class="help" id="iCount">重复的卡密会自动跳过</div></div>`,
+    '<button class="btn-line" onclick="closeDrawer()">取消</button><button onclick="doImport(this)">导入</button>');
+  $('#iCodes').oninput = () => {
+    const n = new Set($('#iCodes').value.split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean)).size;
+    $('#iCount').textContent = n ? `识别到 ${n} 个卡密，重复的会自动跳过` : '重复的卡密会自动跳过';
+  };
+  $('#iCodes').focus();
+}
+async function doImport(btn) {
+  if (!$('#iCodes').value.trim()) return toast('请先粘贴卡密', true);
+  // 导入要向上游逐张核对，可能要等几秒：期间禁用按钮并显示转圈，防止重复点击
+  const label = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>核对中…';
+  let r;
+  try {
+    r = await api('/cards/import', { method: 'POST', body: { plan_id: Number($('#iPlan').value), codes: $('#iCodes').value } });
+  } catch (e) {
+    // 失败（提示已由 api() 弹出）：恢复按钮，卡密留在输入框里可以重试
+    btn.disabled = false;
+    btn.innerHTML = label;
+    return;
+  }
+  const rejected = r.rejected || [];
+  toast(`新增 ${r.added} 个${r.duplicated ? `，跳过重复 ${r.duplicated} 个` : ''}${rejected.length ? `，未通过核对 ${rejected.length} 个` : ''}`);
+  plans = await api('/plans');
+  PAGES[location.hash.slice(1)]?.load() ?? loadOverview();
+  if (!rejected.length) return closeDrawer();
+  // 有卡密没通过上游核对：留在抽屉里列出每张的原因，方便核实
+  openDrawer('导入结果', `
+    <p>新增 <b>${r.added}</b> 个${r.duplicated ? `，跳过重复 ${r.duplicated} 个` : ''}。以下 <b>${rejected.length}</b> 个卡密未通过上游核对，没有导入：</p>
+    <div class="table-wrap"><table><thead><tr><th>卡密</th><th>上游状态</th></tr></thead><tbody>${
+      rejected.map((x) => `<tr><td><code>${esc(x.code)}</code></td><td>${esc(x.reason)}</td></tr>`).join('')
+    }</tbody></table></div>`,
+    '<button onclick="closeDrawer()">知道了</button>');
+}
+
+// ---------- 套餐 ----------
+function stockCell(p) {
+  const avail = p.cards.AVAILABLE || 0;
+  const sell = Math.max(0, p.sellable);
+  const pending = avail - p.sellable;
+  const pct = avail ? Math.round((sell / avail) * 100) : 0;
+  let note = '';
+  if (sell === 0) note = '<span class="tag-danger">缺货</span>';
+  else if (sell <= LOW_STOCK) note = '<span class="tag-warn">库存紧张</span>';
+  else if (pending > 0) note = `<span class="n">${pending} 张待分配</span>`;
+  else if (p.cards.USED) note = `<span class="n">已用 ${p.cards.USED}</span>`;
+  const title = pending > 0 ? `${pending} 张可用卡密已被「已付款、待分配卡密」的订单占用` : '';
+  return `<div class="stock" title="${title}"><div class="t">可售 ${sell} / 可用 ${avail}</div><div class="bar"><i style="width:${pct}%"></i></div>${note}</div>`;
+}
+async function loadPlans() {
+  plans = await api('/plans');
+  $('#pTable').innerHTML = `<thead><tr><th>套餐</th><th class="num">价格</th><th>库存</th><th>上架</th><th>操作</th></tr></thead><tbody>` +
+    (plans.map((p) => `<tr>
+      <td><div class="name">${esc(p.name)}</div><div class="sub">${esc(p.description)}</div></td>
+      <td class="num">¥${yuan(p.price_cents)}</td>
+      <td>${stockCell(p)}</td>
+      <td><label class="switch"><input type="checkbox" ${p.active ? 'checked' : ''} onchange="toggleActive(${p.id}, this)"><span></span></label></td>
+      <td><div class="ops"><button class="btn-line" onclick="openImport(${p.id})">导入卡密</button><button class="btn-line" onclick="openPlan(${p.id})">编辑</button></div></td>
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="5">还没有套餐</td></tr>') + '</tbody>';
+}
+function planBody(p) {
+  return { id: p.id, name: p.name, description: p.description, price_cents: p.price_cents, sort: p.sort, active: !!p.active };
+}
+async function toggleActive(id, el) {
+  const p = plans.find((x) => x.id === id);
+  try {
+    await api('/plans', { method: 'POST', body: { ...planBody(p), active: el.checked } });
+    p.active = el.checked ? 1 : 0; toast(el.checked ? '已上架' : '已下架');
+  } catch { el.checked = !el.checked; }
+}
+function openPlan(id) {
+  const p = plans.find((x) => x.id === id) || { name: '', description: '', price_cents: '', sort: plans.length + 1, active: 1 };
+  openDrawer(id ? `编辑套餐：${esc(p.name)}` : '新增套餐', `
+    <div class="field"><label>套餐名称</label><input id="fName" value="${esc(p.name)}" placeholder="如 ChatGPT Plus 1个月">
+      <div class="help">名称中的「Plus / Pro 5x / 1个月」会用于首页卡片的标题和权益说明</div></div>
+    <div class="field"><label>售价（元）</label><div class="prefix"><span>¥</span><input id="fPrice" type="number" step="0.01" min="0.01" value="${p.price_cents ? yuan(p.price_cents) : ''}"></div></div>
+    <div class="field"><label>卡片描述</label><input id="fDesc" value="${esc(p.description)}" placeholder="如 日常对话、写作与学习"><div class="help">显示在首页套餐卡片上</div></div>
+    <div class="field"><label>排序</label><input id="fSort" type="number" value="${p.sort}"><div class="help">数字越小越靠前</div></div>
+    <div class="field"><label>上架</label><label class="switch"><input type="checkbox" id="fActive" ${p.active ? 'checked' : ''}><span></span></label></div>`,
+    `<button class="btn-line" onclick="closeDrawer()">取消</button><button onclick="savePlan(${id || 0})">保存</button>`);
+  $('#fName').focus();
+}
+async function savePlan(id) {
+  const price = Math.round(Number($('#fPrice').value) * 100);
+  if (!$('#fName').value.trim()) return toast('请填写套餐名称', true);
+  if (!(price > 0)) return toast('请填写正确的售价', true);
+  await api('/plans', { method: 'POST', body: {
+    id: id || undefined, name: $('#fName').value.trim(), description: $('#fDesc').value.trim(),
+    price_cents: price, sort: Number($('#fSort').value) || 0, active: $('#fActive').checked,
+  } });
+  toast('已保存'); closeDrawer(); loadPlans();
+}
+
+function start() {
+  $('#login').hidden = true; $('#app').hidden = false;
+  $('#who').textContent = sessionStorage.getItem('who') || 'admin';
+  route();
+}
+if (auth) start(); else showLogin();
+</script>
+</body>
+</html>

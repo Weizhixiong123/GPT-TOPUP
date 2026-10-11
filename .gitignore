@@ -1,0 +1,11 @@
+node_modules/
+data/
+.env
+certs/
+
+.env.*
+!.env.example
+.agents/
+.claude/
+output/
+*.log

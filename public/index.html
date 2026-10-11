@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPT 充值中心</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .hero { text-align: center; padding: 40px 0 28px; }
+    .hero h1 { font-size: 40px; font-weight: 600; line-height: 1.2; margin: 0 0 10px; letter-spacing: -.02em; }
+    .hero p { margin: 0; color: var(--text-2); font-size: 17px; }
+
+    /* 支付方式 */
+    .pay { display: flex; justify-content: center; margin: 24px 0 32px; }
+    .pay .track { display: inline-flex; padding: 4px; border-radius: 999px; background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .pay button { background: transparent; color: var(--text); border: 0; padding: 10px 30px; font-size: 15px; font-weight: 500; gap: 10px; }
+    .pay button:hover { background: transparent; }
+    .pay button.active { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 1px 1px rgba(0, 0, 0, .04); }
+    .pay svg { width: 22px; height: 22px; }
+
+    /* 套餐 */
+    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: stretch; }
+    .plan { position: relative; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px 28px 30px; box-shadow: var(--shadow); }
+    .plan.featured { border: 1.5px solid var(--text); }
+    .plan.disabled { opacity: .55; }
+    .plan .hot { position: absolute; top: 24px; right: 22px; font-size: 13px; font-weight: 500; padding: 3px 12px; border-radius: 999px; background: var(--soft); color: var(--text); }
+    .plan .title { font-size: 28px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+    .plan .price { display: flex; align-items: baseline; margin-top: 10px; }
+    .plan .price .cur { font-size: 22px; font-weight: 600; margin-right: 1px; }
+    .plan .price .num { font-size: 50px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
+    .plan .price .per { font-size: 20px; color: var(--text-2); margin-left: 6px; }
+    .plan .tagline { color: var(--text-2); font-size: 17px; margin: 6px 0 20px; }
+    .plan .buy { width: 100%; padding: 12px; font-size: 17px; background: transparent; color: var(--text); border: 1.5px solid var(--text); }
+    .plan .buy:hover { background: var(--soft); }
+    .plan.featured .buy { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+    .plan.featured .buy:hover { background: var(--primary-h); }
+    .plan ul { list-style: none; margin: 24px 0 0; padding: 22px 0 0; border-top: 1px solid var(--line); }
+    .plan li { display: flex; align-items: center; gap: 16px; padding: 7px 0; font-size: 16px; color: var(--text-2); }
+    .plan li svg { flex: none; color: var(--text); }
+    .plans-err { text-align: center; margin-top: 16px; }
+
+    /* 流程 */
+    .steps4 { display: grid; grid-template-columns: repeat(4, 1fr); margin: 36px 0 8px; }
+    .steps4 .s { position: relative; text-align: center; }
+    .steps4 .s:not(:last-child)::after { content: ""; position: absolute; top: 24px; left: calc(50% + 48px); right: calc(-50% + 48px); height: 1px; background: var(--line); }
+    .steps4 .n { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 17px; background: var(--card); box-shadow: var(--shadow); }
+    .steps4 b { display: block; font-size: 17px; font-weight: 500; }
+    .steps4 span { color: var(--muted); font-size: 15px; }
+
+    /* 常见问题 */
+    .faq-sec { max-width: 800px; margin: 72px auto 0; }
+    .faq-sec h2 { font-size: 28px; font-weight: 600; text-align: center; margin: 0 0 24px; letter-spacing: -.01em; }
+    .faq { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .faq details + details { border-top: 1px solid var(--line); }
+    .faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; font-size: 16px; font-weight: 600; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: ""; width: 9px; height: 9px; border: solid var(--text); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
+    .faq details[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+    .faq p { margin: 0; padding: 12px 22px 14px; background: var(--soft); color: var(--text-2); font-size: 15px; border-top: 1px solid var(--line); }
+    /* 未完成订单提示 */
+    .notice { display: flex; justify-content: center; margin-top: 18px; }
+    .notice a { display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+                background: color-mix(in srgb, var(--card) 70%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); backdrop-filter: blur(8px); }
+    .notice a:hover { background: var(--card); }
+    .notice .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--info); box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 20%, transparent); }
+    .notice .go { background: var(--primary); color: var(--on-primary); border-radius: 999px; padding: 2px 12px; font-size: 13px; }
+
+    #plans, #faq { scroll-margin-top: 80px; }
+    .flash { animation: flash 1s ease; }
+    @keyframes flash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 25%, transparent); } }
+
+    @media (max-width: 900px) {
+      .plans { grid-template-columns: 1fr; gap: 16px; max-width: 520px; margin: 0 auto; }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 0 16px; }
+      .topnav nav { gap: 16px; }
+      .topnav nav a { font-size: 14px; }
+      .topnav .logo { font-size: 17px; }
+      .hero { padding: 24px 0 8px; }
+      .hero h1 { font-size: 30px; }
+      .hero p { font-size: 15px; }
+      .pay button { padding: 9px 20px; }
+      .plan { padding: 22px 20px 20px; }
+      .plan .title { font-size: 24px; }
+      .plan .price .num { font-size: 42px; }
+      .plan .tagline { font-size: 15px; margin-bottom: 16px; }
+      .plan ul { margin-top: 18px; padding-top: 14px; }
+      .plan li { font-size: 14px; padding: 4px 0; gap: 12px; }
+      .steps4 { margin-top: 32px; }
+      .steps4 .s:not(:last-child)::after { left: calc(50% + 28px); right: calc(-50% + 28px); top: 18px; }
+      .steps4 .n { width: 36px; height: 36px; font-size: 14px; }
+      .steps4 b { font-size: 14px; }
+      .steps4 span { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg"></div>
+
+<header class="topnav" id="topnav">
+  <div class="container">
+    <a class="logo" href="/">GPT 充值中心</a>
+    <nav id="navlinks">
+      <a href="#plans" class="active">套餐</a>
+      <a href="/orders.html">我的订单</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h1>选择你的 ChatGPT 套餐</h1>
+    <p>选择适合你的会员套餐，扫码支付后开始充值</p>
+    <div class="notice" id="notice" hidden></div>
+  </section>
+
+  <div class="pay"><div class="track" id="channels"></div></div>
+
+  <section class="plans" id="plans"><p class="muted">加载中…</p></section>
+  <div class="err plans-err" id="err"></div>
+
+  <section class="steps4">
+    <div class="s"><div class="n">01</div><b>选择套餐</b><span>挑选适合的套餐</span></div>
+    <div class="s"><div class="n">02</div><b>扫码支付</b><span>微信或支付宝付款</span></div>
+    <div class="s"><div class="n">03</div><b>提交 Token</b><span>填写账号 Token</span></div>
+    <div class="s"><div class="n">04</div><b>自动到账</b><span>实时查看进度</span></div>
+  </section>
+
+  <section class="faq-sec" id="faq">
+    <h2>常见问题</h2>
+    <div class="faq">
+      <details open><summary>Token 是什么？安全吗？</summary><p>Token 是登录 ChatGPT 后的访问凭证，用于把会员开通到你的账号。Token 仅用于本次充值，加密存储，充值完成后立即删除。</p></details>
+      <details><summary>充值后多久可以到账？</summary><p>提交 Token 后通常 1 分钟内完成，订单页会实时显示进度，完成后刷新 ChatGPT 即可生效。</p></details>
+      <details><summary>充值失败怎么办？</summary><p>若因 Token 失效导致失败，可在订单页重新提交；其他原因请凭订单号联系客服处理或退款。</p></details>
+      <details><summary>在哪里查看我的订单？</summary><p>点击右上角「我的订单」即可查看在本浏览器下过的订单。订单记录只保存在当前浏览器，更换设备时请使用下单后保存的订单链接。</p></details>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">本站为第三方充值服务，与 OpenAI 无关</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
+const CHECK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICONS = {
+  wechat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9.5 4C5.4 4 2 6.8 2 10.2c0 1.9 1 3.6 2.7 4.7L4 17.5l2.9-1.5c.8.2 1.7.4 2.6.4"/><path d="M15.5 9C12 9 9 11.3 9 14.2s3 5.2 6.5 5.2c.7 0 1.4-.1 2-.3l2.5 1.4-.6-2.3c1.6-1 2.6-2.4 2.6-4 0-2.9-3-5.2-6.5-5.2z"/><circle cx="7" cy="9" r=".9" fill="currentColor"/><circle cx="12" cy="9" r=".9" fill="currentColor" stroke="none"/><circle cx="13.3" cy="13.6" r=".8" fill="currentColor" stroke="none"/><circle cx="17.7" cy="13.6" r=".8" fill="currentColor" stroke="none"/></svg>',
+  alipay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 8h10M12 5.5V11M8 11h8c-.8 3.5-3.6 6.2-8 7.5"/><path d="M10.5 13.5c2.2 1.5 5 3 8.5 4"/></svg>',
+  mock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8M12 8v8"/></svg>',
+};
+let channel = null;
+
+// 「ChatGPT Pro 5x 1个月」→ 标题 / 倍数 / 月数
+function parsePlan(name) {
+  const short = name.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || name;
+  const months = (name.match(/(\d+)\s*个?月$/) || [])[1] || '1';
+  const mult = (short.match(/(\d+)\s*x/i) || [])[1];
+  return {
+    short,
+    months,
+    features: [mult ? `用量为 Plus 的 ${mult} 倍` : `${short} 基础用量`, `有效期 ${months} 个月`, '自动充值，通常 1 分钟到账'],
+  };
+}
+
+fetch('/api/plans').then((r) => r.json()).then(({ plans, channels }) => {
+  const seg = $('#channels');
+  for (const c of channels) {
+    const b = document.createElement('button');
+    b.innerHTML = `${ICONS[c.name] || ICONS.mock}<span>${esc(c.label)}</span>`;
+    b.onclick = () => { seg.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b)); channel = c.name; };
+    seg.appendChild(b);
+  }
+  seg.firstChild?.click();
+
+  const box = $('#plans');
+  box.innerHTML = plans.length ? '' : '<p class="muted">暂无可售套餐</p>';
+  const featuredId = (plans.find((p) => /5x/i.test(p.name)) || plans[Math.floor(plans.length / 2)])?.id;
+  for (const p of plans) {
+    const { short, months, features } = parsePlan(p.name);
+    // 人工服务套餐：不走自助下单，也不看库存，点击后打开客服小窗
+    const available = p.manual || p.in_stock;
+    if (p.manual) features[features.length - 1] = '专人充值，客服一对一服务';
+    const el = document.createElement('div');
+    el.className = `plan${p.id === featuredId ? ' featured' : ''}${available ? '' : ' disabled'}`;
+    el.innerHTML = `
+      ${p.id === featuredId && available ? '<span class="hot">热门</span>' : ''}
+      <div class="title">${esc(short)}</div>
+      <div class="price"><span class="cur">¥</span><span class="num">${yuan(p.price_cents)}</span><span class="per">/ ${months === '1' ? '' : months}月</span></div>
+      <div class="tagline">${esc(p.description)}</div>
+      <button class="buy" ${available ? '' : 'disabled'}>${p.manual ? '联系客服购买' : p.in_stock ? `选择 ${esc(short)}` : '暂时缺货'}</button>
+      <ul>${features.map((f) => `<li>${CHECK}<span>${esc(f)}</span></li>`).join('')}</ul>`;
+    const btn = el.querySelector('.buy');
+    btn.onclick = p.manual
+      ? () => window.openSupport?.(`购买「${p.name}」请添加客服，并备注套餐名称`)
+      : () => buy(p, btn, short);
+    box.appendChild(el);
+  }
+  onScroll();
+});
+
+async function buy(plan, btn, short) {
+  if (!channel) return ($('#err').textContent = '请选择支付方式');
+  const prevLabel = btn.textContent;
+  document.querySelectorAll('.plan .buy').forEach((b) => (b.disabled = true));
+  btn.textContent = '正在创建订单…'; $('#err').textContent = '';
+  try {
+    // 同一套餐 + 支付方式已有未过期的待支付订单时，直接回到该订单，避免重复下单
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('orders') || '[]'); } catch {}
+    for (const o of recent.filter((x) => x.planId === plan.id && Date.now() - x.t < 60 * 60e3)) {
+      const r = await fetch(`/api/orders/${encodeURIComponent(o.no)}?key=${encodeURIComponent(o.key)}`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d.status === 'PENDING_PAYMENT' && d.pay_channel === channel && d.expire_at - Date.now() > 60e3) {
+        location.href = `/order.html?no=${encodeURIComponent(o.no)}&key=${encodeURIComponent(o.key)}`;
+        return;
+      }
+    }
+
+    const r = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan_id: plan.id, channel }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    try {
+      const recent = JSON.parse(localStorage.getItem('orders') || '[]');
+      recent.unshift({ no: d.order_no, key: d.access_key, t: Date.now(), plan: short, planId: plan.id });
+      localStorage.setItem('orders', JSON.stringify(recent.slice(0, 20)));
+    } catch {}
+    location.href = `/order.html?no=${d.order_no}&key=${d.access_key}`;
+  } catch (e) {
+    $('#err').textContent = e.message;
+    btn.textContent = prevLabel;
+    document.querySelectorAll('.plan:not(.disabled) .buy').forEach((b) => (b.disabled = false));
+  }
+}
+
+// 有未完成的订单时，在标题下方提示用户继续
+(async () => {
+  const TODO = { PENDING_PAYMENT: '待支付', PAID: '待填写 Token', QUEUED: '充值中', REDEEMING: '充值中', MANUAL_REVIEW: '处理中' };
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem('orders') || '[]').slice(0, 5); } catch {}
+  for (const o of recent) {
+    try {
+      const r = await fetch(`/api/orders/${encodeURIComponent(o.no)}?key=${encodeURIComponent(o.key)}`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d.status === 'PENDING_PAYMENT' && d.expire_at < Date.now()) continue;
+      const label = TODO[d.status] || (d.can_submit_token ? '待重新提交 Token' : '');
+      if (!label) continue;
+      const plan = d.plan_name.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '');
+      $('#notice').innerHTML = `<a href="/order.html?no=${encodeURIComponent(o.no)}&key=${encodeURIComponent(o.key)}">
+        <span class="dot"></span><span>你有 1 个 ${esc(plan)} 订单${label}</span><span class="go">继续 →</span></a>`;
+      $('#notice').hidden = false;
+      return;
+    } catch {}
+  }
+})();
+
+// 导航：点击切换高亮并滚动到对应区块；手动滚动时按位置自动高亮（仅页内锚点）
+const links = [...document.querySelectorAll('#navlinks a[href^="#"]')];
+const sections = links.map((a) => document.querySelector(a.getAttribute('href')));
+let active = 0;
+let lockUntil = 0; // 点击后的平滑滚动期间不做自动高亮
+
+function setActive(i) {
+  active = i;
+  links.forEach((a, j) => a.classList.toggle('active', j === i));
+}
+
+function inView(el) {
+  const r = el.getBoundingClientRect();
+  return r.top >= 64 && r.bottom <= innerHeight;
+}
+
+function onScroll() {
+  $('#topnav').classList.toggle('scrolled', scrollY > 8);
+  if (Date.now() < lockUntil) return;
+  let idx = 0;
+  sections.forEach((s, i) => { if (s && s.getBoundingClientRect().top < innerHeight * 0.5) idx = i; });
+  // 到底部时「我的订单」「常见问题」并排都可见，保留用户点过的那个
+  const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+  if (atBottom && active > 0 && inView(sections[active])) idx = active;
+  setActive(idx);
+}
+
+links.forEach((a, i) => a.addEventListener('click', (e) => {
+  e.preventDefault();
+  const target = sections[i];
+  setActive(i);
+  lockUntil = Date.now() + 900;
+  history.replaceState(null, '', a.getAttribute('href'));
+  if (i === 0) scrollTo({ top: 0, behavior: 'smooth' });
+  else target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 已在屏幕内无法再滚动时，闪一下提示已定位
+  if (i > 0) {
+    const box = target.querySelector('.faq') || target;
+    box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+  }
+}));
+
+addEventListener('scroll', onScroll, { passive: true });
+addEventListener('resize', onScroll);
+onScroll();
+</script>
+<script src="/support.js" defer></script>
+</body>
+</html>
