@@ -83,9 +83,11 @@ details summary { cursor: pointer; }
 .nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: saturate(180%) blur(12px); }
 .nav .inner { max-width: 1120px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
 .nav .logo { font-weight: 600; font-size: 17px; text-decoration: none; letter-spacing: -.01em; }
-.logo { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
-.brand-icon { display: block; width: 36px; height: 36px; object-fit: contain; flex: none; }
-.logo:focus-visible { outline: 2px solid #335cff; outline-offset: 5px; border-radius: 4px; }
+.logo { display: inline-flex; align-items: center; gap: 8px; color: var(--text); white-space: nowrap; }
+.brand-icon { display: block; width: 28px; height: 28px; flex: none; background-color: currentColor;
+  -webkit-mask: url('/brand/gptsuchong-logo.svg') center / contain no-repeat;
+  mask: url('/brand/gptsuchong-logo.svg') center / contain no-repeat; }
+.logo:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; border-radius: 4px; }
 .nav a.link { font-size: 14px; color: var(--text-2); text-decoration: none; padding: 6px 12px; border-radius: 999px; }
 .nav a.link:hover { background: var(--soft); color: var(--text); }
 
@@ -132,7 +134,7 @@ details summary { cursor: pointer; }
   .topnav nav a { font-size: 14px; }
   .topnav .logo { font-size: 17px; }
   .logo { gap: 6px; }
-  .brand-icon { width: 30px; height: 30px; }
+  .brand-icon { width: 24px; height: 24px; }
   .page-title { padding: 24px 0 16px; }
   .page-title h1 { font-size: 28px; }
 }
