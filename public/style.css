@@ -1,11 +1,13 @@
 /* 极简黑白风格：中性灰阶 + 胶囊按钮 + 细边框卡片 */
 :root {
-  --bg: #ffffff; --card: #ffffff; --text: #0d0d0d; --text-2: #5d5d5d; --muted: #8f8f8f;
-  --line: #e5e5e5; --soft: #f4f4f4; --hover: #ececec;
+  --bg: #f7f7f5; --card: #ffffff; --text: #0d0d0d; --text-2: #5f5f5a; --muted: #8e8e88;
+  --line: #e2e2dd; --soft: #efefeb; --hover: #e8e8e3;
   --primary: #0d0d0d; --primary-h: #2f2f2f; --on-primary: #ffffff;
   --accent: #10a37f; --danger: #e02e2a; --warn: #d97706; --info: #2563eb;
   --radius: 16px;
   --font: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  /* 价格等大号数字：DIN 风格的系统字体（macOS / iOS 的 DIN Alternate，Windows 的 Bahnschrift） */
+  --num: "DIN Alternate", "Bahnschrift", "Roboto", var(--font);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -93,25 +95,18 @@ details summary { cursor: pointer; }
 
 .footer { max-width: 1120px; margin: 0 auto; padding: 32px 20px 40px; font-size: 12px; color: var(--muted); text-align: center; }
 
-/* ===== 站点外壳：渐变背景 + 透明导航（首页 / 我的订单 / 订单页共用）===== */
+/* ===== 站点外壳：近白底 + 顶部一层很淡的冷色光 + 透明导航（首页 / 我的订单 / 订单页共用）===== */
 :root {
-  --glow: radial-gradient(60% 55% at 0% 0%, #6884fa 0%, transparent 70%),
-          radial-gradient(55% 50% at 50% 0%, #a6bcff 0%, transparent 75%),
-          radial-gradient(55% 55% at 100% 0%, #bdb1ec 0%, transparent 72%);
-  --wash: linear-gradient(180deg, #bfcbfd 0%, #d9defc 45%, #eef0fd 80%, transparent 100%);
-  --shadow: 0 1px 2px rgba(16, 24, 64, .04), 0 8px 24px rgba(16, 24, 64, .06);
+  --glow: radial-gradient(65% 100% at 50% 0%, rgba(96, 120, 255, .11) 0%, transparent 72%);
+  --shadow: 0 1px 2px rgba(20, 20, 16, .04), 0 6px 20px rgba(20, 20, 16, .05);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --glow: radial-gradient(60% 55% at 0% 0%, rgba(104, 132, 250, .28) 0%, transparent 70%),
-            radial-gradient(55% 50% at 50% 0%, rgba(166, 188, 255, .16) 0%, transparent 75%),
-            radial-gradient(55% 55% at 100% 0%, rgba(189, 177, 236, .22) 0%, transparent 72%);
-    --wash: linear-gradient(180deg, rgba(120, 140, 240, .12) 0%, transparent 100%);
+    --glow: radial-gradient(65% 100% at 50% 0%, rgba(120, 140, 255, .14) 0%, transparent 72%);
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
   }
 }
-.bg { position: absolute; inset: 0 0 auto 0; height: 1050px; background: var(--glow), var(--wash); pointer-events: none; z-index: -1;
-      -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
+.bg { position: absolute; inset: 0 0 auto 0; height: 520px; background: var(--glow); pointer-events: none; z-index: -1; }
 .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 
 /* 导航：透明浮在渐变上 */
@@ -124,9 +119,9 @@ details summary { cursor: pointer; }
 .topnav nav a:hover { color: var(--text); }
 .topnav nav a.active { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
 
-.foot { text-align: center; color: var(--text-2); font-size: 15px; padding: 28px 0 36px; }
+.foot { text-align: center; color: var(--muted); font-size: 13px; padding: 28px 0 36px; }
 .page-title { text-align: center; padding: 40px 0 28px; }
-.page-title h1 { font-size: 36px; font-weight: 600; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.02em; }
+.page-title h1 { font-size: 40px; font-weight: 300; line-height: 1.2; margin: 0 0 10px; letter-spacing: -.02em; }
 .page-title p { margin: 0; color: var(--text-2); font-size: 16px; }
 @media (max-width: 600px) {
   .container { padding: 0 16px; }

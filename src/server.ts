@@ -2,7 +2,8 @@ import express, { type ErrorRequestHandler } from 'express';
 import config from './config.ts';
 import { get, migrate, closeDb } from './db.ts';
 import * as payments from './payments/index.ts';
-import publicRoutes, { mockPayRouter } from './routes/public.ts';
+import publicRoutes, { cachedPlans, mockPayRouter } from './routes/public.ts';
+import { renderHome, robotsTxt, sitemapXml } from './home.ts';
 import adminRoutes from './routes/admin.ts';
 import * as worker from './worker.ts';
 
@@ -48,7 +49,8 @@ app.use((req, res, next) => {
   // 接口返回的订单信息不允许被浏览器或中间代理缓存
   if (req.path.startsWith('/api/') || req.path.startsWith('/mock-pay/')) res.set('Cache-Control', 'no-store');
   // 后台页面不让搜索引擎收录
-  if (req.path.startsWith('/admin') || req.path.startsWith('/api/admin')) res.set('X-Robots-Tag', 'noindex, nofollow');
+  // 订单页的网址里带访问密钥，同样不能被收录
+  if (req.path.startsWith('/admin') || req.path.startsWith('/api/admin') || req.path.startsWith('/order')) res.set('X-Robots-Tag', 'noindex, nofollow');
   next();
 });
 
@@ -73,6 +75,14 @@ app.get('/healthz', (_req, res) => {
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 if (payments.enabled.includes('mock')) app.use(mockPayRouter());
+// 首页由服务端填入套餐内容后输出（必须排在静态文件之前，否则会直接返回未填充的模板）
+app.get(['/', '/index.html'], (_req, res, next) => {
+  renderHome(cachedPlans)
+    .then((html) => res.set('Cache-Control', 'no-cache').type('html').send(html))
+    .catch(next);
+});
+app.get('/robots.txt', (_req, res) => void res.type('text/plain').send(robotsTxt()));
+app.get('/sitemap.xml', (_req, res) => void res.type('application/xml').send(sitemapXml()));
 app.use(express.static(config.publicDir));
 
 const errorHandler: ErrorRequestHandler = (err: { status?: number; message?: string }, _req, res, _next) => {

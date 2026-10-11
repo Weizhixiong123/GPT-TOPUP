@@ -31,7 +31,7 @@ async function qrImage(text: string): Promise<string> {
 
 // 套餐列表短缓存：首页每次访问都要查库存，缓存 3 秒；并发请求共用同一次查询，防止被刷首页打满数据库
 let plansCache: { at: number; data: Promise<Awaited<ReturnType<typeof orders.listPlans>>> } | undefined;
-function cachedPlans() {
+export function cachedPlans() {
   if (!plansCache || Date.now() - plansCache.at > 3000) {
     const data = orders.listPlans();
     plansCache = { at: Date.now(), data };

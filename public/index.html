@@ -3,100 +3,119 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GPT 速充 · ChatGPT 充值</title>
+  <title>ChatGPT Plus / Pro 充值 - GPT 速充</title>
+  <meta name="description" content="GPT 速充提供 ChatGPT Plus、Pro 会员充值，直接开通到你自己的账号。套餐价格透明，客服在线协助，充值进度可查。">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GPT 速充">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="ChatGPT Plus / Pro 充值 - GPT 速充">
+  <meta property="og:description" content="ChatGPT Plus、Pro 会员充值，直接开通到你自己的账号。价格透明，客服在线协助。">
+  <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+  <!--HEAD-->
   <link rel="icon" type="image/svg+xml" href="/brand/gptsuchong-logo.svg">
   <link rel="stylesheet" href="/style.css">
   <style>
-    .hero { text-align: center; padding: 40px 0 28px; }
-    .hero h1 { font-size: 40px; font-weight: 600; line-height: 1.2; margin: 0 0 10px; letter-spacing: -.02em; }
+    /* 首页。设计要点：整页安静，只有一处反色（主推套餐）；价格数字用 DIN 风格字体，像电表读数 */
+    main.container { max-width: 1120px; }
+
+    /* 标题区：左对齐大号细体标题；右侧放支付方式（接入在线支付时才有） */
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; padding: 72px 0 44px; }
+    .hero h1 { font-size: 56px; font-weight: 300; line-height: 1.12; margin: 0 0 16px; letter-spacing: -.02em; }
     .hero p { margin: 0; color: var(--text-2); font-size: 17px; }
 
     /* 支付方式 */
-    .pay { display: flex; justify-content: center; margin: 24px 0 32px; }
-    .pay .track { display: inline-flex; padding: 4px; border-radius: 999px; background: color-mix(in srgb, var(--text) 7%, transparent); }
-    .pay button { background: transparent; color: var(--text); border: 0; padding: 10px 30px; font-size: 15px; font-weight: 500; gap: 10px; }
-    .pay button:hover { background: transparent; }
-    .pay button.active { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 1px 1px rgba(0, 0, 0, .04); }
-    .pay svg { width: 22px; height: 22px; }
+    .pay .track { display: inline-flex; padding: 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+    .pay button { background: transparent; color: var(--text-2); border: 0; padding: 8px 20px; font-size: 14px; font-weight: 500; gap: 8px; }
+    .pay button:hover { background: transparent; color: var(--text); }
+    .pay button.active { background: var(--primary); color: var(--on-primary); }
+    .pay svg { width: 18px; height: 18px; }
 
-    /* 套餐 */
-    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: stretch; }
-    .plan { position: relative; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px 28px 30px; box-shadow: var(--shadow); }
-    .plan.featured { border: 1.5px solid var(--text); }
-    .plan.disabled { opacity: .55; }
-    .plan .hot { position: absolute; top: 24px; right: 22px; font-size: 13px; font-weight: 500; padding: 3px 12px; border-radius: 999px; background: var(--soft); color: var(--text); }
-    .plan .title { font-size: 28px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
-    .plan .price { display: flex; align-items: baseline; margin-top: 10px; }
-    .plan .price .cur { font-size: 22px; font-weight: 600; margin-right: 1px; }
-    .plan .price .num { font-size: 50px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
-    .plan .price .per { font-size: 20px; color: var(--text-2); margin-left: 6px; }
-    .plan .tagline { color: var(--text-2); font-size: 17px; margin: 6px 0 20px; }
-    .plan .buy { width: 100%; padding: 12px; font-size: 17px; background: transparent; color: var(--text); border: 1.5px solid var(--text); }
-    .plan .buy:hover { background: var(--soft); }
-    .plan.featured .buy { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
-    .plan.featured .buy:hover { background: var(--primary-h); }
-    .plan ul { list-style: none; margin: 24px 0 0; padding: 22px 0 0; border-top: 1px solid var(--line); }
-    .plan li { display: flex; align-items: center; gap: 16px; padding: 7px 0; font-size: 16px; color: var(--text-2); }
-    .plan li svg { flex: none; color: var(--text); }
-    .plans-err { text-align: center; margin-top: 16px; }
-
-    /* 流程 */
-    .steps4 { display: grid; grid-template-columns: repeat(4, 1fr); margin: 36px 0 8px; }
-    .steps4 .s { position: relative; text-align: center; }
-    .steps4 .s:not(:last-child)::after { content: ""; position: absolute; top: 24px; left: calc(50% + 48px); right: calc(-50% + 48px); height: 1px; background: var(--line); }
-    .steps4 .n { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 17px; background: var(--card); box-shadow: var(--shadow); }
-    .steps4 b { display: block; font-size: 17px; font-weight: 500; }
-    .steps4 span { color: var(--muted); font-size: 15px; }
-
-    /* 常见问题 */
-    .faq-sec { max-width: 800px; margin: 72px auto 0; }
-    .faq-sec h2 { font-size: 28px; font-weight: 600; text-align: center; margin: 0 0 24px; letter-spacing: -.01em; }
-    .faq { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-    .faq details + details { border-top: 1px solid var(--line); }
-    .faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; font-size: 16px; font-weight: 600; }
-    .faq summary::-webkit-details-marker { display: none; }
-    .faq summary::after { content: ""; width: 9px; height: 9px; border: solid var(--text); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
-    .faq details[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
-    .faq p { margin: 0; padding: 12px 22px 14px; background: var(--soft); color: var(--text-2); font-size: 15px; border-top: 1px solid var(--line); }
     /* 未完成订单提示 */
-    .notice { display: flex; justify-content: center; margin-top: 18px; }
+    .notice { margin-top: 22px; }
     .notice a { display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
-                background: color-mix(in srgb, var(--card) 70%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); backdrop-filter: blur(8px); }
-    .notice a:hover { background: var(--card); }
-    .notice .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--info); box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 20%, transparent); }
+                background: var(--card); border: 1px solid var(--line); }
+    .notice a:hover { border-color: var(--text-2); }
+    .notice .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--info); }
     .notice .go { background: var(--primary); color: var(--on-primary); border-radius: 999px; padding: 2px 12px; font-size: 13px; }
 
-    #plans, #faq { scroll-margin-top: 80px; }
-    .flash { animation: flash 1s ease; }
-    @keyframes flash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 25%, transparent); } }
+    /* 套餐：细边线、无阴影；主推的一张整张反色，是页面上唯一的重色块 */
+    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+    .plan { display: flex; flex-direction: column; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 20px; padding: 32px 32px 28px; }
+    .plan.featured { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+    .plan .title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; line-height: 1.3; }
+    .plan .price { display: flex; align-items: baseline; margin-top: 28px; font-family: var(--num); font-variant-numeric: tabular-nums lining-nums; }
+    .plan .price .cur { font-size: 26px; font-weight: 400; margin-right: 4px; opacity: .7; }
+    .plan .price .num { font-size: 68px; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+    .plan .price .per { font-family: var(--font); font-size: 15px; margin-left: 8px; opacity: .6; }
+    .plan .tagline { font-size: 15px; margin: 14px 0 0; opacity: .68; }
+    .plan ul { list-style: none; margin: 28px 0 32px; padding: 24px 0 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+    .plan li { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 15px; }
+    .plan li span { opacity: .78; }
+    .plan li svg { flex: none; width: 16px; height: 16px; }
+    .plan .buy { width: 100%; margin-top: auto; padding: 13px; font-size: 16px; background: transparent; color: inherit; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
+    .plan .buy:hover:not(:disabled) { background: transparent; border-color: currentColor; }
+    .plan.featured .buy { background: var(--on-primary); color: var(--primary); border-color: var(--on-primary); }
+    .plan.featured .buy:hover:not(:disabled) { background: color-mix(in srgb, var(--on-primary) 88%, var(--primary)); }
+    /* 缺货：卡片照常显示，只有按钮不可用 */
+    .plan .buy:disabled { opacity: 1; color: var(--muted); border-color: var(--line); border-style: dashed; }
+    .plans-err { margin-top: 16px; }
 
-    @media (max-width: 900px) {
-      .plans { grid-template-columns: 1fr; gap: 16px; max-width: 520px; margin: 0 auto; }
+    /* 流程：确实是先后顺序，所以保留编号；做成一条细线分隔的横排，不再用圆圈 */
+    .steps4 { display: grid; grid-template-columns: repeat(4, 1fr); margin: 56px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .steps4 .s { display: flex; gap: 14px; padding: 22px 20px 22px 0; }
+    .steps4 .s + .s { padding-left: 20px; border-left: 1px solid var(--line); }
+    .steps4 .n { font-family: var(--num); font-size: 22px; font-weight: 500; line-height: 1.2; color: var(--muted); }
+    .steps4 b { display: block; font-size: 15px; font-weight: 600; }
+    .steps4 span { display: block; color: var(--text-2); font-size: 13px; margin-top: 2px; }
+
+    /* 常见问题：左标题、右列表，只用横线分隔 */
+    .faq-sec { display: grid; grid-template-columns: 280px 1fr; gap: 48px; margin: 96px 0 0; }
+    .faq-sec h2 { font-size: 32px; font-weight: 300; line-height: 1.2; margin: 0; letter-spacing: -.02em; }
+    .faq { border-top: 1px solid var(--text); border-radius: 2px; }
+    .faq details { border-bottom: 1px solid var(--line); }
+    .faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 2px; font-size: 16px; font-weight: 500; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: ""; flex: none; width: 8px; height: 8px; border: solid var(--text-2); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
+    .faq details[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+    .faq p { margin: 0; padding: 0 40px 22px 2px; max-width: 44em; color: var(--text-2); font-size: 15px; line-height: 1.75; }
+
+    footer.container { max-width: 1120px; }
+    .foot { margin: 96px 0 0; padding: 28px 0 40px; border-top: 1px solid var(--line); text-align: left; }
+
+    #plans, #faq { scroll-margin-top: 88px; }
+    .flash { animation: flash 1s ease; }
+    @keyframes flash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 18%, transparent); } }
+
+    @media (max-width: 960px) {
+      .plans { grid-template-columns: 1fr; gap: 14px; max-width: 520px; }
+      .faq-sec { grid-template-columns: 1fr; gap: 24px; margin-top: 72px; }
+    }
+    @media (max-width: 720px) {
+      .steps4 { grid-template-columns: 1fr 1fr; }
+      .steps4 .s { padding: 18px 12px 18px 0; }
+      .steps4 .s + .s { padding-left: 0; border-left: 0; }
+      .steps4 .s:nth-child(even) { padding-left: 16px; border-left: 1px solid var(--line); }
+      .steps4 .s:nth-child(n + 3) { border-top: 1px solid var(--line); }
     }
     @media (max-width: 600px) {
-      .container { padding: 0 16px; }
-      .topnav nav { gap: 16px; }
-      .topnav nav a { font-size: 14px; }
-      .topnav .logo { font-size: 17px; }
-      .hero { padding: 24px 0 8px; }
-      .hero h1 { font-size: 30px; }
+      .hero { padding: 36px 0 28px; }
+      .hero h1 { font-size: 36px; margin-bottom: 12px; }
       .hero p { font-size: 15px; }
-      .pay button { padding: 9px 20px; }
-      .plan { padding: 22px 20px 20px; }
-      .plan .title { font-size: 24px; }
-      .plan .price .num { font-size: 42px; }
-      .plan .tagline { font-size: 15px; margin-bottom: 16px; }
-      .plan ul { margin-top: 18px; padding-top: 14px; }
-      .plan li { font-size: 14px; padding: 4px 0; gap: 12px; }
-      .steps4 { margin-top: 32px; }
-      .steps4 .s:not(:last-child)::after { left: calc(50% + 28px); right: calc(-50% + 28px); top: 18px; }
-      .steps4 .n { width: 36px; height: 36px; font-size: 14px; }
-      .steps4 b { font-size: 14px; }
-      .steps4 span { display: none; }
+      .plan { padding: 24px 22px 22px; }
+      .plan .price { margin-top: 20px; }
+      .plan .price .num { font-size: 56px; }
+      .plan ul { margin: 22px 0 24px; padding-top: 18px; }
+      .faq-sec h2 { font-size: 26px; }
+      .faq p { padding-right: 8px; }
+      .foot { margin-top: 64px; }
     }
   </style>
 </head>
 <body>
+<div hidden><img src="/brand/share-square.png" alt="" width="300" height="300"></div>
 <div class="bg"></div>
 
 <header class="topnav" id="topnav">
@@ -112,41 +131,40 @@
 
 <main class="container">
   <section class="hero">
-    <h1>选择你的 ChatGPT 套餐</h1>
-    <p>选择适合你的会员套餐，扫码支付后开始充值</p>
-    <div class="notice" id="notice" hidden></div>
+    <div>
+      <h1>选择你的 ChatGPT 套餐</h1>
+      <p id="heroSub"><!--HERO_SUB--></p>
+      <div class="notice" id="notice" hidden></div>
+    </div>
+    <div class="pay" hidden><div class="track" id="channels"></div></div>
   </section>
 
-  <div class="pay"><div class="track" id="channels"></div></div>
-
-  <section class="plans" id="plans"><p class="muted">加载中…</p></section>
+  <section class="plans" id="plans"><!--PLANS--></section>
   <div class="err plans-err" id="err"></div>
 
-  <section class="steps4">
-    <div class="s"><div class="n">01</div><b>选择套餐</b><span>挑选适合的套餐</span></div>
-    <div class="s"><div class="n">02</div><b>扫码支付</b><span>微信或支付宝付款</span></div>
-    <div class="s"><div class="n">03</div><b>提交 Token</b><span>填写账号 Token</span></div>
-    <div class="s"><div class="n">04</div><b>自动到账</b><span>实时查看进度</span></div>
-  </section>
+  <section class="steps4" id="steps" aria-label="充值流程"><!--STEPS--></section>
 
   <section class="faq-sec" id="faq">
     <h2>常见问题</h2>
     <div class="faq">
-      <details open><summary>Token 是什么？安全吗？</summary><p>Token 是登录 ChatGPT 后的访问凭证，用于把会员开通到你的账号。Token 仅用于本次充值，加密存储，充值完成后立即删除。</p></details>
-      <details><summary>充值后多久可以到账？</summary><p>提交 Token 后通常 1 分钟内完成，订单页会实时显示进度，完成后刷新 ChatGPT 即可生效。</p></details>
-      <details><summary>充值失败怎么办？</summary><p>若因 Token 失效导致失败，可在订单页重新提交；其他原因请凭订单号联系客服处理或退款。</p></details>
-      <details><summary>在哪里查看我的订单？</summary><p>点击右上角「我的订单」即可查看在本浏览器下过的订单。订单记录只保存在当前浏览器，更换设备时请使用下单后保存的订单链接。</p></details>
+      <details open><summary>充值需要我提供什么？</summary><p>需要你的 ChatGPT 登录信息，用来把会员开通到你自己的账号。它是在已登录的浏览器里打开指定页面后复制得到的一段内容，不需要提供账号密码。</p></details>
+      <details><summary>把登录信息交出去安全吗？</summary><p>这段信息只用于本次充值。充值完成后，你可以在 ChatGPT 的设置里退出所有设备的登录，这段信息会立即失效。</p></details>
+      <details><summary>多久可以到账？</summary><p>在线下单的订单提交登录信息后通常 1 分钟内完成，订单页会显示进度。联系客服购买的订单由专人处理，具体时间以客服答复为准。到账后刷新 ChatGPT 即可看到会员状态。</p></details>
+      <details><summary>充值失败怎么办？</summary><p>把订单号或付款记录发给客服，我们会重新处理或退款。如果是登录信息过期导致的失败，重新复制一份提交即可。</p></details>
+      <details><summary>在哪里查看我的订单？</summary><p>在线下单的订单可以在右上角「我的订单」里查看。记录只保存在当前浏览器，换设备时请使用下单后保存的订单链接。联系客服购买的订单请直接向客服查询。</p></details>
+      <details><summary>这是 OpenAI 官方的服务吗？</summary><p>不是。GPT 速充是第三方充值服务，与 OpenAI 没有关联。</p></details>
     </div>
   </section>
 </main>
 
-<footer class="foot">本站为第三方充值服务，与 OpenAI 无关</footer>
+<footer class="container"><p class="foot">本站为第三方充值服务，与 OpenAI 无关</p></footer>
 
+<script type="application/json" id="home-data"><!--DATA--></script>
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
-const CHECK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICONS = {
   wechat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9.5 4C5.4 4 2 6.8 2 10.2c0 1.9 1 3.6 2.7 4.7L4 17.5l2.9-1.5c.8.2 1.7.4 2.6.4"/><path d="M15.5 9C12 9 9 11.3 9 14.2s3 5.2 6.5 5.2c.7 0 1.4-.1 2-.3l2.5 1.4-.6-2.3c1.6-1 2.6-2.4 2.6-4 0-2.9-3-5.2-6.5-5.2z"/><circle cx="7" cy="9" r=".9" fill="currentColor"/><circle cx="12" cy="9" r=".9" fill="currentColor" stroke="none"/><circle cx="13.3" cy="13.6" r=".8" fill="currentColor" stroke="none"/><circle cx="17.7" cy="13.6" r=".8" fill="currentColor" stroke="none"/></svg>',
   alipay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 8h10M12 5.5V11M8 11h8c-.8 3.5-3.6 6.2-8 7.5"/><path d="M10.5 13.5c2.2 1.5 5 3 8.5 4"/></svg>',
@@ -154,60 +172,35 @@ const ICONS = {
 };
 let channel = null;
 
-// 「ChatGPT Pro 5x 1个月」→ 标题 / 倍数 / 月数
-function parsePlan(name) {
-  const short = name.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || name;
-  const months = (name.match(/(\d+)\s*个?月$/) || [])[1] || '1';
-  const mult = (short.match(/(\d+)\s*x/i) || [])[1];
-  return {
-    short,
-    months,
-    features: [mult ? `用量为 Plus 的 ${mult} 倍` : `${short} 基础用量`, `有效期 ${months} 个月`, '自动充值，通常 1 分钟到账'],
-  };
+// 套餐卡片、流程说明由服务端输出（见 src/home.ts），这里只读取数据并绑定点击
+const { plans, channels } = JSON.parse($('#home-data').textContent || '{"plans":[],"channels":[]}');
+
+const seg = $('#channels');
+for (const c of channels) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.innerHTML = `${ICONS[c.name] || ICONS.mock}<span>${esc(c.label)}</span>`;
+  b.onclick = () => { seg.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b)); channel = c.name; };
+  seg.appendChild(b);
 }
+seg.firstChild?.click();
+// 只有一种支付方式时不显示选择器：没有可选的，已自动选中
+document.querySelector('.pay').hidden = channels.length < 2;
 
-fetch('/api/plans').then((r) => r.json()).then(({ plans, channels }) => {
-  const seg = $('#channels');
-  for (const c of channels) {
-    const b = document.createElement('button');
-    b.innerHTML = `${ICONS[c.name] || ICONS.mock}<span>${esc(c.label)}</span>`;
-    b.onclick = () => { seg.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b)); channel = c.name; };
-    seg.appendChild(b);
-  }
-  seg.firstChild?.click();
-  // 没有接入在线支付时不显示支付方式选择
-  document.querySelector('.pay').hidden = !channels.length;
-
-  const box = $('#plans');
-  box.innerHTML = plans.length ? '' : '<p class="muted">暂无可售套餐</p>';
-  const featuredId = (plans.find((p) => /5x/i.test(p.name)) || plans[Math.floor(plans.length / 2)])?.id;
-  for (const p of plans) {
-    const { short, months, features } = parsePlan(p.name);
-    // 人工服务套餐：不走自助下单，也不看库存，点击后打开客服小窗
-    const available = p.manual || p.in_stock;
-    if (p.manual) features[features.length - 1] = '专人充值，客服一对一服务';
-    const el = document.createElement('div');
-    el.className = `plan${p.id === featuredId ? ' featured' : ''}${available ? '' : ' disabled'}`;
-    el.innerHTML = `
-      ${p.id === featuredId && available ? '<span class="hot">热门</span>' : ''}
-      <div class="title">${esc(short)}</div>
-      <div class="price"><span class="cur">¥</span><span class="num">${yuan(p.price_cents)}</span><span class="per">/ ${months === '1' ? '' : months}月</span></div>
-      <div class="tagline">${esc(p.description)}</div>
-      <button class="buy" ${available ? '' : 'disabled'}>${p.manual ? '联系客服购买' : p.in_stock ? `选择 ${esc(short)}` : '暂时缺货'}</button>
-      <ul>${features.map((f) => `<li>${CHECK}<span>${esc(f)}</span></li>`).join('')}</ul>`;
-    const btn = el.querySelector('.buy');
-    btn.onclick = p.manual
-      ? () => window.openSupport?.(`购买「${p.name}」请添加客服，并备注套餐名称`)
-      : () => buy(p, btn, short);
-    box.appendChild(el);
-  }
-  onScroll();
-});
+for (const el of document.querySelectorAll('.plan')) {
+  const p = plans.find((x) => x.id === Number(el.dataset.id));
+  const btn = el.querySelector('.buy');
+  if (!p || !btn) continue;
+  // 人工服务套餐：不走自助下单，点击后打开客服小窗
+  btn.onclick = p.manual
+    ? () => window.openSupport?.(`购买「${p.name}」请添加客服，并备注套餐名称`)
+    : () => buy(p, btn, el.dataset.short);
+}
 
 async function buy(plan, btn, short) {
   if (!channel) return ($('#err').textContent = '请选择支付方式');
   const prevLabel = btn.textContent;
-  document.querySelectorAll('.plan .buy').forEach((b) => (b.disabled = true));
+  document.querySelectorAll('.plan .buy').forEach((b) => { if (b.disabled) b.dataset.soldOut = '1'; b.disabled = true; });
   btn.textContent = '正在创建订单…'; $('#err').textContent = '';
   try {
     // 同一套餐 + 支付方式已有未过期的待支付订单时，直接回到该订单，避免重复下单
@@ -235,7 +228,7 @@ async function buy(plan, btn, short) {
   } catch (e) {
     $('#err').textContent = e.message;
     btn.textContent = prevLabel;
-    document.querySelectorAll('.plan:not(.disabled) .buy').forEach((b) => (b.disabled = false));
+    document.querySelectorAll('.plan .buy').forEach((b) => (b.disabled = !!b.dataset.soldOut));
   }
 }
 
