@@ -1,5 +1,9 @@
-// 支付宝 当面付 - 扫码支付（alipay.trade.precreate）
-// 文档: https://opendocs.alipay.com/open/194/106078
+// 支付宝。按 ALIPAY_PRODUCT 支持三种已签约产品：
+//   f2f  当面付          alipay.trade.precreate  → 返回二维码内容，页面直接显示二维码
+//   page 电脑网站支付    alipay.trade.page.pay   → 返回收银台链接，用户跳转到支付宝页面付款
+//   wap  手机网站支付    alipay.trade.wap.pay    → 同上，手机端可直接拉起支付宝 App
+// 查询（alipay.trade.query）和异步通知三种产品通用。
+// 文档: https://opendocs.alipay.com/open/194/106078 、https://opendocs.alipay.com/open/270/105899
 import crypto from 'node:crypto';
 import config from '../config.ts';
 import type { PaymentProvider } from '../types.ts';
@@ -48,7 +52,8 @@ function verify(params: Params): boolean {
     .verify(pem(cfg.alipayPublicKey, 'PUBLIC KEY'), signature, 'base64');
 }
 
-async function call(method: string, biz: object, extra: Params = {}): Promise<AlipayResponse | undefined> {
+/** 公共请求参数 + 业务参数，并签名 */
+function signedParams(method: string, biz: object, extra: Params = {}): Record<string, string> {
   const params: Record<string, string> = {
     app_id: cfg.appId,
     method,
@@ -61,6 +66,11 @@ async function call(method: string, biz: object, extra: Params = {}): Promise<Al
     biz_content: JSON.stringify(biz),
   };
   params.sign = sign(params);
+  return params;
+}
+
+async function call(method: string, biz: object, extra: Params = {}): Promise<AlipayResponse | undefined> {
+  const params = signedParams(method, biz, extra);
   const res = await fetch(cfg.gateway, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
@@ -79,16 +89,38 @@ const alipay: PaymentProvider = {
   name: 'alipay',
   label: '支付宝',
 
-  async createQr({ orderNo, amountCents, subject, expireAt }) {
+  async createQr({ orderNo, amountCents, subject, expireAt, mobile }) {
     const minutes = Math.max(1, Math.floor((expireAt - Date.now()) / 60000));
+    const notify = { notify_url: `${config.baseUrl}/api/notify/alipay` };
+
+    // 网站支付：不需要先调接口，把签好名的参数拼成收银台链接即可，用户打开链接时支付宝才创建交易
+    const web = mobile && cfg.products.includes('wap') ? 'wap' : cfg.products.includes('page') ? 'page' : cfg.products.includes('wap') ? 'wap' : null;
+    if (web && !cfg.products.includes('f2f')) {
+      const params = signedParams(
+        web === 'wap' ? 'alipay.trade.wap.pay' : 'alipay.trade.page.pay',
+        {
+          out_trade_no: orderNo,
+          total_amount: yuan(amountCents),
+          subject,
+          product_code: web === 'wap' ? 'QUICK_WAP_WAY' : 'FAST_INSTANT_TRADE_PAY',
+          timeout_express: `${minutes}m`,
+        },
+        // 付完款支付宝把用户带回「我的订单」。不带订单的访问密钥：这个地址会经过支付宝
+        { ...notify, return_url: `${config.baseUrl}/orders.html` },
+      );
+      return { qr: `${cfg.gateway}?${new URLSearchParams(params).toString()}` };
+    }
+
     const r = await call(
       'alipay.trade.precreate',
       { out_trade_no: orderNo, total_amount: yuan(amountCents), subject, timeout_express: `${minutes}m` },
-      { notify_url: `${config.baseUrl}/api/notify/alipay` },
+      notify,
     );
     if (r?.code !== '10000' || !r.qr_code) throw new Error(`支付宝下单失败: ${r?.sub_msg || r?.msg || 'unknown'}`);
     return { qr: r.qr_code };
   },
+
+  isLink: (payQr) => payQr.startsWith(`${cfg.gateway}?`),
 
   async query(orderNo) {
     const r = await call('alipay.trade.query', { out_trade_no: orderNo });

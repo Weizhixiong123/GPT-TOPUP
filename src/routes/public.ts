@@ -71,7 +71,8 @@ router.post(
   ),
   wrap(async (req, res) => {
     // 「同一 IP 未支付订单上限」与限流用同一个标识（IPv6 按 /64 归并）
-    const order = await orders.createOrder(Number(req.body.plan_id), str(req.body.channel), ipKey(req.ip));
+    const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(req.get('user-agent') ?? '');
+    const order = await orders.createOrder(Number(req.body.plan_id), str(req.body.channel), ipKey(req.ip), mobile);
     res.json({ order_no: order.order_no, access_key: order.access_key });
   }),
 );

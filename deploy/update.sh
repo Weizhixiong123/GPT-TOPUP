@@ -15,7 +15,8 @@ echo "==> 拉取最新镜像"
 docker compose pull
 
 echo "==> 启动 / 重启服务"
-docker compose up -d
+# 强制重建容器：只改了 .env 而镜像没变时，普通的 up -d 不会重启，新配置读不进去
+docker compose up -d --force-recreate
 
 echo "==> 清理不再使用的旧镜像"
 docker image prune -f

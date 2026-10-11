@@ -47,7 +47,10 @@
   <div class="card center" id="payBox" hidden>
     <h2 id="payTitle">请扫码支付</h2>
     <div class="qr"><img id="qr" alt="支付二维码"></div>
-    <p class="muted">剩余支付时间 <b id="countdown"></b>，支付完成后页面会自动跳转</p>
+    <!-- 跳转到支付平台收银台付款的渠道用这个按钮代替二维码 -->
+    <a class="btn" id="payLink" rel="noopener" hidden style="padding:13px 36px;font-size:16px;margin:8px 0 4px">前往支付宝付款</a>
+    <p class="muted" id="wechatHint" hidden>微信里无法打开支付宝。请点右上角「…」，选择「在浏览器打开」后再付款。</p>
+    <p class="muted">剩余支付时间 <b id="countdown"></b>，付款完成后本页会自动更新</p>
     <p class="muted" id="mockHint" hidden>开发模式：<a id="mockLink" target="_blank">点此模拟支付</a></p>
   </div>
 
@@ -132,11 +135,21 @@ function render() {
   $('#payBox').hidden = o.status !== 'PENDING_PAYMENT';
   if (o.status === 'PENDING_PAYMENT') {
     // 过了支付期限后服务端不再返回二维码，但还会再确认一小段时间是否已付款
-    const late = !o.pay_qr_image;
+    const late = !o.pay_qr_image && !o.pay_link;
     $('#payTitle').textContent = late ? '支付已超时，正在确认是否已付款…'
       : o.pay_channel === 'wechat' ? '请使用微信扫码支付' : o.pay_channel === 'alipay' ? '请使用支付宝扫码支付' : '请扫码支付';
-    $('#qr').hidden = late;
-    if (!late && $('#qr').src !== o.pay_qr_image) $('#qr').src = o.pay_qr_image;
+    $('#qr').hidden = late || !o.pay_qr_image;
+    if (o.pay_qr_image && $('#qr').src !== o.pay_qr_image) $('#qr').src = o.pay_qr_image;
+    // 收银台链接：电脑上新开标签页（本页留着等结果），手机上直接跳转（便于拉起支付宝 App，付完会回到「我的订单」）
+    const link = $('#payLink');
+    link.hidden = !o.pay_link;
+    if (o.pay_link) {
+      if (!late) $('#payTitle').textContent = '请前往支付宝完成付款';
+      link.href = o.pay_link;
+      const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(navigator.userAgent);
+      if (mobile) link.removeAttribute('target'); else link.target = '_blank';
+    }
+    $('#wechatHint').hidden = !(o.pay_link && /MicroMessenger/i.test(navigator.userAgent));
     if (o.pay_channel === 'mock') { $('#mockHint').hidden = late; if (!late) $('#mockLink').href = o.pay_qr; }
   }
 

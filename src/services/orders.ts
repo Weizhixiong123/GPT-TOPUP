@@ -54,7 +54,7 @@ export async function listPlans() {
   return rows.map(({ sellable, ...p }) => ({ ...p, in_stock: sellable > 0, manual: isManualPlan(p.id) }));
 }
 
-export async function createOrder(planId: number, channel: string, clientIp = ''): Promise<Order> {
+export async function createOrder(planId: number, channel: string, clientIp = '', mobile = false): Promise<Order> {
   if (!Number.isInteger(planId)) throw new HttpError(404, '套餐不存在');
   const plan = await get<Plan>('SELECT * FROM plans WHERE id = $1 AND active = 1', planId);
   if (!plan) throw new HttpError(404, '套餐不存在');
@@ -104,6 +104,7 @@ export async function createOrder(planId: number, channel: string, clientIp = ''
       amountCents: order.amount_cents,
       subject: plan.name,
       expireAt: order.expire_at,
+      mobile,
     });
     await run('UPDATE orders SET pay_qr = $1, updated_at = $2 WHERE id = $3', qr, now(), order.id);
     return { ...order, pay_qr: qr };
@@ -171,8 +172,11 @@ export interface PublicOrderView {
   plan_name: string;
   amount_cents: number;
   pay_channel: PayChannel;
+  /** 二维码内容；走收银台链接的订单为 null */
   pay_qr: string | null;
   pay_qr_image?: string;
+  /** 收银台链接：有值时页面不显示二维码，而是给出跳转按钮 */
+  pay_link: string | null;
   status: OrderStatus;
   message: string;
   token_mask: string | null;
@@ -188,13 +192,16 @@ export interface PublicOrderView {
 }
 
 export function publicView(o: Order): PublicOrderView {
+  // 过了支付期限就不再给二维码或付款链接（此后 worker 还会查单一小段时间，确认最后一刻的付款）
+  const payable = o.status === 'PENDING_PAYMENT' && now() < o.expire_at ? o.pay_qr : null;
+  const isLink = !!payable && payments.isEnabled(o.pay_channel) && payments.get(o.pay_channel).isLink?.(payable) === true;
   return {
     order_no: o.order_no,
     plan_name: o.plan_name,
     amount_cents: o.amount_cents,
     pay_channel: o.pay_channel,
-    // 过了支付期限就不再给二维码（此后 worker 还会查单一小段时间，确认最后一刻的付款）
-    pay_qr: o.status === 'PENDING_PAYMENT' && now() < o.expire_at ? o.pay_qr : null,
+    pay_qr: isLink ? null : payable,
+    pay_link: isLink ? payable : null,
     status: o.status,
     message: o.message,
     token_mask: o.token_mask,

@@ -98,6 +98,9 @@ const config = {
     enabled: enabledChannels,
     alipay: {
       gateway: env('ALIPAY_GATEWAY', 'https://openapi.alipay.com/gateway.do'),
+      // 已签约的支付产品，逗号分隔：f2f 当面付（页面显示二维码）/ page 电脑网站支付 / wap 手机网站支付（后两种跳转到支付宝收银台）
+      // 同时填 page,wap 时，手机下单走 wap，电脑下单走 page
+      products: env('ALIPAY_PRODUCT', 'f2f').split(',').map((s) => s.trim()).filter(Boolean),
       appId: env('ALIPAY_APP_ID', ''),
       privateKey: readKey(env('ALIPAY_PRIVATE_KEY', '')),
       alipayPublicKey: readKey(env('ALIPAY_PUBLIC_KEY', '')),
@@ -153,6 +156,11 @@ try {
   );
 }
 if (!/^[a-z_][a-z0-9_]*$/.test(config.dbSchema)) throw new Error('DB_SCHEMA 只能包含小写字母、数字和下划线');
+{
+  const products = config.payment.alipay.products;
+  const bad = products.filter((p) => !['f2f', 'page', 'wap'].includes(p));
+  if (bad.length || !products.length) throw new Error(`ALIPAY_PRODUCT 只能是 f2f / page / wap（可逗号分隔多个），当前无法识别：${bad.join(', ') || '（空）'}`);
+}
 
 /** 对外地址是否为本机（localhost / 127.0.0.1 / ::1）。不是本机就视为对公网提供服务 */
 const isLocalBaseUrl = (() => {

@@ -94,6 +94,8 @@ export interface CreateQrParams {
   amountCents: number;
   subject: string;
   expireAt: number;
+  /** 下单的设备是不是手机：有的渠道电脑和手机走不同的支付产品 */
+  mobile?: boolean;
 }
 
 /** 回调所需的最小请求信息，便于脱离 Express 单独测试 */
@@ -114,7 +116,14 @@ export interface NotifyResponder {
 export interface PaymentProvider {
   name: PayChannel;
   label: string;
+  /**
+   * 发起支付。返回值存进订单的 pay_qr，有两种形态：
+   *   - 二维码内容：页面把它画成二维码，用户扫码付款
+   *   - 收银台链接：页面给出按钮，用户跳转到支付平台的页面付款（由 isLink 判断）
+   */
   createQr(params: CreateQrParams): Promise<{ qr: string }>;
+  /** pay_qr 是不是一个需要跳转打开的收银台链接（而不是二维码内容）。不实现则一律当作二维码 */
+  isLink?(payQr: string): boolean;
   query(orderNo: string): Promise<PaymentResult>;
   /** 只有支持异步通知的渠道才需要实现（mock 没有） */
   parseNotify?(req: NotifyRequest): PaymentNotify;
