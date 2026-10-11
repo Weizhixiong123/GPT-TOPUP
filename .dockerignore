@@ -1,0 +1,16 @@
+# 不进镜像的内容。.env 含数据库密码和密钥，只放在服务器上，绝不能打进镜像
+.env
+.env.*
+!.env.example
+.git
+.github
+node_modules
+certs
+data
+deploy
+images
+output
+.agents
+.claude
+*.md
+*.log

@@ -42,22 +42,25 @@ export async function sellableStock(planId: number, db: Pick<Db, 'get'> = { get 
   return (await db.get<{ n: number }>(`SELECT ${SELLABLE_SQL} AS n FROM plans p WHERE p.id = $1`, planId))?.n ?? 0;
 }
 
+/** 人工服务套餐：在 MANUAL_PLAN_IDS 里，或者站点没有接入任何在线支付（此时全部套餐都只能联系客服购买） */
+const isManualPlan = (planId: number): boolean => payments.enabled.length === 0 || config.manualPlanIds.includes(planId);
+
 export async function listPlans() {
   const rows = await all<Pick<Plan, 'id' | 'name' | 'description' | 'price_cents'> & { sellable: number }>(
     `SELECT p.id, p.name, p.description, p.price_cents, ${SELLABLE_SQL} AS sellable
      FROM plans p WHERE p.active = 1 ORDER BY p.sort, p.id`,
   );
   // manual：人工服务套餐，前台不走自助下单，改为引导用户联系客服
-  return rows.map(({ sellable, ...p }) => ({ ...p, in_stock: sellable > 0, manual: config.manualPlanIds.includes(p.id) }));
+  return rows.map(({ sellable, ...p }) => ({ ...p, in_stock: sellable > 0, manual: isManualPlan(p.id) }));
 }
 
 export async function createOrder(planId: number, channel: string, clientIp = ''): Promise<Order> {
-  const provider = payments.get(channel);
   if (!Number.isInteger(planId)) throw new HttpError(404, '套餐不存在');
   const plan = await get<Plan>('SELECT * FROM plans WHERE id = $1 AND active = 1', planId);
   if (!plan) throw new HttpError(404, '套餐不存在');
   // 服务端也要拦：只改前台按钮的话，绕过页面直接调接口仍能下单付款
-  if (config.manualPlanIds.includes(plan.id)) throw new HttpError(400, '该套餐由专人充值，请联系客服购买');
+  if (isManualPlan(plan.id)) throw new HttpError(400, '该套餐由专人充值，请联系客服购买');
+  const provider = payments.get(channel);
 
   const t = now();
   const order = await tx(async (db) => {

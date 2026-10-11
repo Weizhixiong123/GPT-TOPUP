@@ -84,3 +84,33 @@ scripts/seed.ts        演示数据
 - **修改表结构**：新增 `migrations/00N_xxx.sql`，启动服务或运行 `npm run migrate` 时自动执行，已执行过的不会重复执行。
 - **延迟**：服务器请部署在香港（到新加坡约 30–40ms）。代码已尽量合并查询以减少往返。
 - **免费版注意**：一周无访问会被暂停，正式上线前请升级付费版。
+
+## 部署（Docker）
+
+代码推送到 `main` 后，GitHub Actions 自动构建镜像并推到 `ghcr.io/weizhixiong123/gpt-topup`（见 [.github/workflows/docker.yml](.github/workflows/docker.yml)）。服务器只拉镜像，不放源码。
+
+**首次部署**
+
+1. 服务器登录镜像仓库（镜像是私有的）。在 GitHub → Settings → Developer settings → Personal access tokens (classic) 创建一个只勾选 `read:packages` 的令牌：
+
+   ```bash
+   echo "<令牌>" | docker login ghcr.io -u weizhixiong123 --password-stdin
+   ```
+
+2. 把 [deploy/](deploy/) 目录下的三个文件放到服务器的 `/opt/gpt-topup`，并把 `env.production.example` 复制为 `.env` 填好。
+3. 启动：`bash update.sh`。服务只监听本机 `127.0.0.1:3000`。
+4. Nginx 反向代理到 `http://127.0.0.1:3000` 并配置 HTTPS；建议对 `/admin.html` 和 `/api/admin` 限制来源 IP。
+
+**更新**：本地 `git push`，等 Actions 构建完成，在服务器执行 `bash update.sh`。
+
+**常用命令**（在 `/opt/gpt-topup` 下）
+
+```bash
+docker compose logs -f --tail 100          # 看日志
+docker compose restart                     # 重启（不会重新读取 .env）
+docker compose up -d --force-recreate      # 修改 .env 后用这个
+```
+
+**回退到旧版本**：把 `docker-compose.yml` 里的 `:latest` 换成某次提交的完整哈希，再执行 `docker compose up -d`。
+
+**暂不接入支付**：`.env` 里设 `PAYMENT_PROVIDERS=none`，所有套餐按钮都会变成「联系客服购买」。

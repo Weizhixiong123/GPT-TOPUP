@@ -1,6 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import config from './config.ts';
-import { migrate, closeDb } from './db.ts';
+import { get, migrate, closeDb } from './db.ts';
 import * as payments from './payments/index.ts';
 import publicRoutes, { mockPayRouter } from './routes/public.ts';
 import adminRoutes from './routes/admin.ts';
@@ -62,6 +62,13 @@ app.use(
 );
 // 注意：表单（urlencoded）解析只在支付宝回调路由上启用（见 routes/public.ts），
 // 其他接口只接受 JSON，避免第三方网页用普通表单跨站提交。
+
+// 健康检查：进程活着且数据库可用才算健康（Docker 据此判断是否需要重启容器）
+app.get('/healthz', (_req, res) => {
+  get('SELECT 1')
+    .then(() => res.json({ ok: true }))
+    .catch(() => res.status(503).json({ ok: false }));
+});
 
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);

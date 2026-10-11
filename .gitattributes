@@ -1,0 +1,5 @@
+# 脚本和部署配置在任何系统上都保持 LF 换行，否则从 Windows 拷到服务器后 bash 无法执行
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+deploy/* text eol=lf

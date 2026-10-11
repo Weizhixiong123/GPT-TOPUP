@@ -24,7 +24,8 @@ const enabledChannels = env('PAYMENT_PROVIDERS', 'mock')
   .split(',')
   .map((s) => s.trim())
   .filter((s): s is PayChannel => {
-    if (!s) return false;
+    // none：不接入任何在线支付，所有套餐都走人工（联系客服购买）
+    if (!s || s === 'none') return false;
     if (!(PAY_CHANNELS as readonly string[]).includes(s)) {
       console.warn(`[config] 未知支付渠道 ${s}，已忽略`);
       return false;

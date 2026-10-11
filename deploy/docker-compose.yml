@@ -1,0 +1,20 @@
+# 服务器上使用：和 .env、update.sh 放在同一个目录（如 /opt/gpt-topup）
+services:
+  gpt-topup:
+    image: ghcr.io/weizhixiong123/gpt-topup:latest
+    container_name: gpt-topup
+    restart: unless-stopped
+    init: true
+    # 只监听本机：外部访问一律经过 Nginx 反向代理（HTTPS）
+    ports:
+      - "127.0.0.1:3000:3000"
+    # 配置文件挂进容器，程序按和本地开发相同的方式读取。修改后执行 docker compose up -d --force-recreate 生效
+    volumes:
+      - ./.env:/app/.env:ro
+    # 内存上限：出问题时不拖垮同一台机器上的其他服务
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
