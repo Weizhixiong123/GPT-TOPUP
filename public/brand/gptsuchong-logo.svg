@@ -4,8 +4,15 @@
     :root { color: #0d0d0d; }
     @media (prefers-color-scheme: dark) { :root { color: #ececec; } }
   </style>
-  <g fill="currentColor">
-    <path d="M25.1 6.8A13 13 0 1 0 29 16h-9.5v4H24a9 9 0 1 1-1.7-10.4Z"/>
-    <path d="m19.8 2.2-10 15.2h6.1l-3.7 12.4 12-17.1h-6.6Z"/>
-  </g>
+  <defs>
+    <path id="bolt" d="M20.8 2.2 8.8 18h7l-3.6 11.8L25 12h-7.3Z"/>
+    <!-- A 1.75-unit cutout gives a ~1.5px gap at the 28px navbar size. -->
+    <mask id="ring-cutout" x="0" y="0" width="32" height="32" maskUnits="userSpaceOnUse" style="mask-type: luminance">
+      <rect width="32" height="32" fill="white"/>
+      <use href="#bolt" fill="black" stroke="black" stroke-width="3.5" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <path d="M24.13 7.87A11.5 11.5 0 1 0 27.5 16h-7"
+    stroke="currentColor" stroke-width="3" stroke-linecap="round" mask="url(#ring-cutout)"/>
+  <use href="#bolt" fill="currentColor"/>
 </svg>
