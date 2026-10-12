@@ -124,6 +124,8 @@ export interface PaymentProvider {
   createQr(params: CreateQrParams): Promise<{ qr: string }>;
   /** pay_qr 是不是一个需要跳转打开的收银台链接（而不是二维码内容）。不实现则一律当作二维码 */
   isLink?(payQr: string): boolean;
+  /** 这个收银台链接是不是只返回一个二维码、专门用来嵌在我们页面里的（而不是完整的收银台页面） */
+  isEmbed?(payQr: string): boolean;
   query(orderNo: string): Promise<PaymentResult>;
   /** 只有支持异步通知的渠道才需要实现（mock 没有） */
   parseNotify?(req: NotifyRequest): PaymentNotify;

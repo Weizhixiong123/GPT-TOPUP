@@ -81,6 +81,8 @@ async function call(method: string, biz: object, extra: Params = {}): Promise<Al
   return json[`${method.replace(/\./g, '_')}_response`];
 }
 
+/** 嵌入式二维码的边长（像素），订单页里的框按这个尺寸留位置 */
+const EMBED_QR_WIDTH = 200;
 const yuan = (cents: number): string => (cents / 100).toFixed(2);
 const cents = (yuanStr: string | undefined): number => Math.round(Number(yuanStr) * 100);
 const isPaid = (status: string | undefined): boolean => status === 'TRADE_SUCCESS' || status === 'TRADE_FINISHED';
@@ -96,6 +98,9 @@ const alipay: PaymentProvider = {
     // 网站支付：不需要先调接口，把签好名的参数拼成收银台链接即可，用户打开链接时支付宝才创建交易
     const web = mobile && cfg.products.includes('wap') ? 'wap' : cfg.products.includes('page') ? 'page' : cfg.products.includes('wap') ? 'wap' : null;
     if (web && !cfg.products.includes('f2f')) {
+      // 电脑上用「嵌入式二维码」：支付宝只返回一个二维码，我们把它嵌在订单页里，用户不用离开本站。
+      // 手机上二维码没法自己扫自己，仍然给完整的收银台页面。
+      const embed = web === 'page' && !mobile;
       const params = signedParams(
         web === 'wap' ? 'alipay.trade.wap.pay' : 'alipay.trade.page.pay',
         {
@@ -104,9 +109,11 @@ const alipay: PaymentProvider = {
           subject,
           product_code: web === 'wap' ? 'QUICK_WAP_WAY' : 'FAST_INSTANT_TRADE_PAY',
           timeout_express: `${minutes}m`,
+          ...(embed ? { qr_pay_mode: '4', qrcode_width: EMBED_QR_WIDTH } : {}),
         },
-        // 付完款支付宝把用户带回「我的订单」。不带订单的访问密钥：这个地址会经过支付宝
-        { ...notify, return_url: `${config.baseUrl}/orders.html` },
+        // 跳转到收银台的：付完款支付宝把用户带回「我的订单」（不带订单的访问密钥，这个地址会经过支付宝）。
+        // 嵌入的不设回跳地址：否则付款后支付宝会在那个小框里打开我们的页面
+        embed ? notify : { ...notify, return_url: `${config.baseUrl}/orders.html` },
       );
       return { qr: `${cfg.gateway}?${new URLSearchParams(params).toString()}` };
     }
@@ -121,6 +128,7 @@ const alipay: PaymentProvider = {
   },
 
   isLink: (payQr) => payQr.startsWith(`${cfg.gateway}?`),
+  isEmbed: (payQr) => payQr.startsWith(`${cfg.gateway}?`) && payQr.includes('qr_pay_mode'),
 
   async query(orderNo) {
     const r = await call('alipay.trade.query', { out_trade_no: orderNo });

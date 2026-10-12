@@ -175,8 +175,10 @@ export interface PublicOrderView {
   /** 二维码内容；走收银台链接的订单为 null */
   pay_qr: string | null;
   pay_qr_image?: string;
-  /** 收银台链接：有值时页面不显示二维码，而是给出跳转按钮 */
+  /** 收银台链接：有值时页面不自己画二维码 */
   pay_link: string | null;
+  /** pay_link 是否用来嵌在页面里（支付平台返回的二维码小页面）；否则给出跳转按钮 */
+  pay_embed: boolean;
   status: OrderStatus;
   message: string;
   token_mask: string | null;
@@ -202,6 +204,7 @@ export function publicView(o: Order): PublicOrderView {
     pay_channel: o.pay_channel,
     pay_qr: isLink ? null : payable,
     pay_link: isLink ? payable : null,
+    pay_embed: isLink && payments.get(o.pay_channel).isEmbed?.(payable ?? '') === true,
     status: o.status,
     message: o.message,
     token_mask: o.token_mask,

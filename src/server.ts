@@ -31,6 +31,8 @@ const CSP = [
   "base-uri 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  // 订单页要嵌入支付宝返回的付款二维码（网关会跳到支付宝的其他子域名）
+  ...(payments.enabled.includes('alipay') ? ['frame-src https://openapi.alipay.com https://*.alipay.com'] : []),
 ].join('; ');
 
 app.use((req, res, next) => {
