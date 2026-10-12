@@ -261,14 +261,14 @@ let stats = null;
 
 const STATUS = {
   PENDING_PAYMENT: ['待支付', ''], PAID: ['待填 Token', 'run'], QUEUED: ['充值中', 'run'], REDEEMING: ['充值中', 'run'],
-  MANUAL_REVIEW: ['待人工处理', 'warn'], SUCCESS: ['充值成功', 'ok'], FAILED: ['充值失败', 'bad'], EXPIRED: ['已过期', ''], REFUNDED: ['已退款', ''],
+  MANUAL_REVIEW: ['待人工处理', 'warn'], SUCCESS: ['充值成功', 'ok'], FAILED: ['充值失败', 'bad'], EXPIRED: ['已过期', ''], CANCELLED: ['已取消', ''], REFUNDED: ['已退款', ''],
 };
 const CARD_STATUS = { AVAILABLE: ['可用', 'ok'], LOCKED: ['已锁定', 'run'], USED: ['已使用', ''], INVALID: ['已作废', 'bad'] };
 const CHANNEL = { wechat: '微信', alipay: '支付宝', mock: '模拟' };
 const EVENT = {
   CREATED: '创建订单', PAID: '支付成功', TOKEN_SUBMITTED: '提交 Token', CARD_LOCKED: '锁定卡密', SUBMIT_RESULT: '提交上游',
   SUBMIT_ERROR: '提交上游失败', CARD_INVALID: '卡密无效，已换卡', QUERY_FAILED: '上游返回失败', SUCCESS: '充值成功', FAILED: '充值失败',
-  MANUAL_REVIEW: '转人工', EXPIRED: '订单过期', PAY_CREATE_FAILED: '创建支付失败', PAY_AMOUNT_MISMATCH: '支付金额不一致', WORKER_ERROR: '处理异常',
+  MANUAL_REVIEW: '转人工', EXPIRED: '订单过期', CANCELLED: '用户取消订单', PAY_CLOSE_FAILED: '关闭支付交易失败', PAY_CREATE_FAILED: '创建支付失败', PAY_AMOUNT_MISMATCH: '支付金额不一致', WORKER_ERROR: '处理异常',
   ADMIN_REQUERY: '人工：重新查询', ADMIN_RESUBMIT: '人工：重新提交', ADMIN_MARK_SUCCESS: '人工：确认成功', ADMIN_MARK_FAILED: '人工：确认失败', ADMIN_MARK_REFUNDED: '人工：标记退款',
 };
 const EVENT_TONE = { SUCCESS: 'ok', ADMIN_MARK_SUCCESS: 'ok', MANUAL_REVIEW: 'warn', SUBMIT_ERROR: 'warn', CARD_INVALID: 'warn', PAY_AMOUNT_MISMATCH: 'bad', FAILED: 'bad', QUERY_FAILED: 'bad', WORKER_ERROR: 'bad', ADMIN_MARK_FAILED: 'bad' };
@@ -370,7 +370,7 @@ async function loadOverview() {
 
 // ---------- 订单 ----------
 let oStatus = '';
-const O_TABS = [['', '全部'], ['MANUAL_REVIEW', '待人工'], ['QUEUED,REDEEMING', '充值中'], ['PAID', '待填 Token'], ['SUCCESS', '成功'], ['FAILED', '失败'], ['PENDING_PAYMENT', '待支付'], ['EXPIRED,REFUNDED', '已关闭']];
+const O_TABS = [['', '全部'], ['MANUAL_REVIEW', '待人工'], ['QUEUED,REDEEMING', '充值中'], ['PAID', '待填 Token'], ['SUCCESS', '成功'], ['FAILED', '失败'], ['PENDING_PAYMENT', '待支付'], ['EXPIRED,CANCELLED,REFUNDED', '已关闭']];
 function renderOSeg() {
   const manual = stats ? (stats.byStatus.find((x) => x.status === 'MANUAL_REVIEW')?.c || 0) : 0;
   $('#oSeg').innerHTML = O_TABS.map(([v, l]) =>

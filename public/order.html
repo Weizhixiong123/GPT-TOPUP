@@ -84,6 +84,7 @@
         <div><dt>支付方式</dt><dd id="payChannel"></dd></div>
         <div><dt>剩余时间</dt><dd id="countdown">--:--</dd></div>
         <p class="wait"><span class="spinner"></span>等待付款，完成后本页自动更新</p>
+        <p class="wait" style="margin-top:10px"><a href="#" id="cancelOrder" style="color:var(--muted)">取消订单</a></p>
       </dl>
     </div>
   </div>
@@ -136,9 +137,9 @@ let order = null, timer = null;
 
 const TEXT = {
   PENDING_PAYMENT: '待支付', PAID: '已支付', QUEUED: '排队处理中', REDEEMING: '充值中',
-  SUCCESS: '✅ 充值成功', FAILED: '❌ 充值失败', EXPIRED: '订单已过期', MANUAL_REVIEW: '处理中', REFUNDED: '已退款',
+  SUCCESS: '✅ 充值成功', FAILED: '❌ 充值失败', EXPIRED: '订单已过期', CANCELLED: '订单已取消', MANUAL_REVIEW: '处理中', REFUNDED: '已退款',
 };
-const STEP = { PENDING_PAYMENT: 0, PAID: 1, QUEUED: 2, REDEEMING: 2, MANUAL_REVIEW: 2, SUCCESS: 3, FAILED: 3, REFUNDED: 3, EXPIRED: 0 };
+const STEP = { PENDING_PAYMENT: 0, PAID: 1, QUEUED: 2, REDEEMING: 2, MANUAL_REVIEW: 2, SUCCESS: 3, FAILED: 3, REFUNDED: 3, EXPIRED: 0, CANCELLED: 0 };
 
 async function load() {
   try {
@@ -213,10 +214,10 @@ function render() {
   if (showResult) {
     // 排队和充值中用进度条表示；转人工没有可预期的进度，仍用转圈
     $('#statusText').innerHTML = (o.status === 'MANUAL_REVIEW' ? '<span class="spinner"></span>' : '') + TEXT[o.status];
-    $('#statusMsg').textContent = o.status === 'EXPIRED' ? '订单超时未支付，请重新下单' : o.message;
+    $('#statusMsg').textContent = o.status === 'EXPIRED' ? '订单超时未支付，请重新下单' : o.status === 'CANCELLED' ? '需要的话可以回到首页重新下单' : o.message;
     $('#tokenMask').textContent = [o.account_email && `充值账号：${o.account_email}`, o.token_mask && `Token：${o.token_mask}`].filter(Boolean).join('　·　');
     // 还没成功的订单都给一个联系客服的入口；转人工的订单需要用户主动联系，自动弹出一次
-    $('#contactBtn').hidden = ['SUCCESS', 'EXPIRED', 'REFUNDED'].includes(o.status);
+    $('#contactBtn').hidden = ['SUCCESS', 'EXPIRED', 'CANCELLED', 'REFUNDED'].includes(o.status);
     if (o.status === 'MANUAL_REVIEW') autoOpenSupport();
   }
   tickProgress();
@@ -253,6 +254,20 @@ function tickProgress() {
 setInterval(tickProgress, 500);
 
 $('#contactBtn').onclick = () => window.openSupport?.();
+
+$('#cancelOrder').onclick = async (e) => {
+  e.preventDefault();
+  if (!confirm('确定取消这笔订单吗？取消后付款码会失效。')) return;
+  try {
+    const r = await fetch(`/api/orders/${encodeURIComponent(no)}/cancel`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }),
+    });
+    const d = await r.json();
+    // 取消不了的常见原因是其实已经付款了：提示一下，然后重新读取订单的最新状态
+    if (!r.ok) alert(d.error);
+  } catch { alert('网络异常，请稍后再试'); }
+  clearTimeout(timer); load();
+};
 /** 自动弹出客服小窗：同一个订单在本次浏览器会话里只弹一次，免得每次轮询、刷新都打扰用户 */
 function autoOpenSupport() {
   const flag = `support-shown:${no}`;

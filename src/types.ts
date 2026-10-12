@@ -4,7 +4,7 @@
  * 订单状态:
  *   PENDING_PAYMENT 待支付 -> PAID 已支付待填 Token -> QUEUED 已提交 Token 等待处理
  *   -> REDEEMING 已向上游提交兑换 -> SUCCESS / FAILED
- *   EXPIRED 超时未支付；MANUAL_REVIEW 结果不确定需人工处理；REFUNDED 已退款
+ *   EXPIRED 超时未支付；CANCELLED 用户支付前主动取消；MANUAL_REVIEW 结果不确定需人工处理；REFUNDED 已退款
  */
 export type OrderStatus =
   | 'PENDING_PAYMENT'
@@ -14,6 +14,7 @@ export type OrderStatus =
   | 'SUCCESS'
   | 'FAILED'
   | 'EXPIRED'
+  | 'CANCELLED'
   | 'MANUAL_REVIEW'
   | 'REFUNDED';
 
@@ -127,6 +128,8 @@ export interface PaymentProvider {
   /** 这个收银台链接是不是只返回一个二维码、专门用来嵌在我们页面里的（而不是完整的收银台页面） */
   isEmbed?(payQr: string): boolean;
   query(orderNo: string): Promise<PaymentResult>;
+  /** 关闭一笔未支付的交易，使付款码 / 付款链接失效。交易在支付平台上还不存在也算成功。mock 不需要 */
+  close?(orderNo: string): Promise<void>;
   /** 只有支持异步通知的渠道才需要实现（mock 没有） */
   parseNotify?(req: NotifyRequest): PaymentNotify;
   ackSuccess?(res: NotifyResponder): unknown;

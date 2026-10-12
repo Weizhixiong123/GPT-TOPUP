@@ -85,6 +85,13 @@ const wechat: PaymentProvider = {
     return { paid: json.trade_state === 'SUCCESS', tradeNo: json.transaction_id, amountCents: json.amount?.total };
   },
 
+  async close(orderNo) {
+    const { status, json } = await request<object>('POST', `/v3/pay/transactions/out-trade-no/${encodeURIComponent(orderNo)}/close`, { mchid: cfg.mchId });
+    // 204 关闭成功；订单不存在说明用户还没扫过码，不需要关
+    if (status === 204 || status === 404) return;
+    throw new Error(`微信关闭订单失败: ${json.message || status}`);
+  },
+
   /** 异步通知：需要原始 body（req.rawBody）验签 */
   parseNotify(req) {
     const raw = req.rawBody;

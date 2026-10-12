@@ -125,11 +125,11 @@ export async function markPaid(orderNo: string, pay: { tradeNo?: string; amountC
     await log(order.id, 'PAY_AMOUNT_MISMATCH', { source, amountCents: pay.amountCents, expected: order.amount_cents });
     throw new Error(`金额不一致 ${orderNo}`);
   }
-  // 过期后才到账的也接受（钱已经收了），由用户继续填写 Token。
+  // 过期或取消之后才到账的也接受（钱已经收了），由用户继续填写 Token。
   // next_run_at 设为现在：让 worker 立刻为这笔订单分配卡密并向上游核对
   const r = await run(
-    `UPDATE orders SET status = 'PAID', pay_trade_no = $1, paid_at = $2, next_run_at = $2, message = '', updated_at = $2
-     WHERE id = $3 AND status IN ('PENDING_PAYMENT', 'EXPIRED')`,
+    `UPDATE orders SET status = 'PAID', pay_trade_no = $1, paid_at = $2, next_run_at = $2, message = '', finished_at = NULL, updated_at = $2
+     WHERE id = $3 AND status IN ('PENDING_PAYMENT', 'EXPIRED', 'CANCELLED')`,
     pay.tradeNo || '',
     now(),
     order.id,
@@ -159,6 +159,46 @@ setInterval(() => {
   for (const [id, at] of lastPayQuery) if (t - at > 60e3) lastPayQuery.delete(id);
 }, 5 * 60e3).unref();
 
+/**
+ * 用户取消一笔还没付款的订单。
+ * 先问支付平台到底付了没有：付了就不取消，直接按已支付处理；没付才关闭交易并标记取消。
+ */
+export async function cancelOrder(orderNo: string, accessKey: string): Promise<Order> {
+  const order = await getForUser(orderNo, accessKey);
+  if (order.status !== 'PENDING_PAYMENT') throw new HttpError(409, '只有未支付的订单可以取消');
+
+  const provider = payments.isEnabled(order.pay_channel) ? payments.get(order.pay_channel) : undefined;
+  if (provider) {
+    try {
+      const r = await provider.query(order.order_no);
+      if (r.paid) {
+        await markPaid(order.order_no, r, 'query');
+        throw new HttpError(409, '这笔订单已经支付成功，无法取消');
+      }
+    } catch (e) {
+      if (e instanceof HttpError) throw e;
+      // 查不通时不拦着用户取消：万一其实付了，之后的到账通知会把订单恢复为已支付
+      console.warn(`[cancel] 支付查询失败 ${order.order_no}: ${(e as Error).message}`);
+    }
+    try {
+      await provider.close?.(order.order_no);
+    } catch (e) {
+      // 关不掉也继续取消，原因记到订单日志里
+      await log(order.id, 'PAY_CLOSE_FAILED', (e as Error).message);
+    }
+  }
+
+  const t = now();
+  const r = await run(
+    "UPDATE orders SET status = 'CANCELLED', message = '订单已取消', next_run_at = NULL, finished_at = $1, updated_at = $1 WHERE id = $2 AND status = 'PENDING_PAYMENT'",
+    t,
+    order.id,
+  );
+  // 没改到：就在这一瞬间到账或过期了，把最新状态返回给页面
+  if (r.changes) await log(order.id, 'CANCELLED', '用户取消');
+  return mustOrder(order.id);
+}
+
 export async function getForUser(orderNo: string, accessKey: string): Promise<Order> {
   const order = await orderByNo(orderNo);
   // 用恒定时间比较，避免通过响应耗时逐位猜出访问密钥
@@ -185,6 +225,8 @@ export interface PublicOrderView {
   /** 充值账号邮箱（掩码） */
   account_email: string;
   can_submit_token: boolean;
+  /** 用户能否取消这笔订单（只有未支付的可以） */
+  can_cancel: boolean;
   /** 提交时是否必须是 session 整页 JSON（由上游决定），前端据此校验粘贴内容 */
   need_session: boolean;
   created_at: number;
@@ -211,6 +253,7 @@ export function publicView(o: Order): PublicOrderView {
     account_email: maskEmail(o.account_email),
     can_submit_token:
       (o.status === 'PAID' || (o.status === 'FAILED' && !o.card_id)) && o.token_attempts < MAX_TOKEN_ATTEMPTS,
+    can_cancel: o.status === 'PENDING_PAYMENT',
     need_session: upstream.needsSession === true,
     created_at: o.created_at,
     expire_at: o.expire_at,

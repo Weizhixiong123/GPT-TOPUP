@@ -16,6 +16,7 @@ interface AlipayResponse {
   code?: string;
   msg?: string;
   sub_msg?: string;
+  sub_code?: string;
   qr_code?: string;
   trade_status?: string;
   trade_no?: string;
@@ -108,7 +109,9 @@ const alipay: PaymentProvider = {
           total_amount: yuan(amountCents),
           subject,
           product_code: web === 'wap' ? 'QUICK_WAP_WAY' : 'FAST_INSTANT_TRADE_PAY',
-          timeout_express: `${minutes}m`,
+          // 用绝对截止时间而不是「多少分钟内」：后者从用户打开链接时才开始计时，
+          // 旧链接留到订单过期之后再打开仍然能付款
+          time_expire: beijingTime(new Date(expireAt)),
           ...(embed ? { qr_pay_mode: '4', qrcode_width: EMBED_QR_WIDTH } : {}),
         },
         // 跳转到收银台的：付完款支付宝把用户带回「我的订单」（不带订单的访问密钥，这个地址会经过支付宝）。
@@ -134,6 +137,13 @@ const alipay: PaymentProvider = {
     const r = await call('alipay.trade.query', { out_trade_no: orderNo });
     if (r?.code !== '10000') return { paid: false };
     return { paid: isPaid(r.trade_status), tradeNo: r.trade_no, amountCents: cents(r.total_amount) };
+  },
+
+  async close(orderNo) {
+    const r = await call('alipay.trade.close', { out_trade_no: orderNo });
+    // 用户还没扫码 / 打开过收银台时，支付宝那边还没有这笔交易，不需要关
+    if (r?.code === '10000' || r?.sub_code === 'ACQ.TRADE_NOT_EXIST') return;
+    throw new Error(`支付宝关闭交易失败: ${r?.sub_msg || r?.msg || 'unknown'}`);
   },
 
   /** 异步通知：req.body 为 urlencoded 解析后的对象 */

@@ -94,6 +94,18 @@ router.get(
 );
 
 router.post(
+  '/orders/:no/cancel',
+  // 取消要向支付平台查询并关单，限制频率
+  rateLimit('cancel-order', [{ scope: 'ip', max: 20, windowMs: MIN }]),
+  wrap(async (req, res) => {
+    const no = str(req.params.no);
+    const key = str(req.body.key);
+    if (!ORDER_NO_RE.test(no) || !ACCESS_KEY_RE.test(key)) throw new HttpError(404, '订单不存在');
+    res.json(orders.publicView(await orders.cancelOrder(no, key)));
+  }),
+);
+
+router.post(
   '/orders/:no/token',
   rateLimit('submit-token', [
     { scope: 'ip', max: config.antiAbuse.tokenPerIpPerMin, windowMs: MIN },

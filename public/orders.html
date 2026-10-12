@@ -10,7 +10,11 @@
   <style>
     main { min-height: calc(100vh - 64px - 90px); }
     .list { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
-    .row-o { display: flex; align-items: center; gap: 16px; padding: 18px 22px; text-decoration: none; transition: background .15s; }
+    .row-o { display: flex; align-items: center; gap: 16px; padding: 18px 22px; transition: background .15s; }
+    /* 一行里有两个可点的东西：整行进入订单详情，以及待支付订单的「取消」按钮，所以按钮不能放在链接里面 */
+    .row-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; text-decoration: none; color: inherit; }
+    .row-o .cancel { flex: none; }
+    .row-o a.chev { text-decoration: none; }
     .row-o + .row-o { border-top: 1px solid var(--line); }
     .row-o:hover { background: var(--soft); }
     .row-o .main { flex: 1; min-width: 0; }
@@ -65,11 +69,12 @@ const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
 const shortName = (n) => n.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || n;
 const STATUS = {
   PENDING_PAYMENT: '待支付', PAID: '待填写 Token', QUEUED: '充值中', REDEEMING: '充值中', MANUAL_REVIEW: '处理中',
-  SUCCESS: '充值成功', FAILED: '充值失败', EXPIRED: '已过期', REFUNDED: '已退款',
+  SUCCESS: '充值成功', FAILED: '充值失败', EXPIRED: '已过期', CANCELLED: '已取消', REFUNDED: '已退款',
 };
 const BUSY = ['PENDING_PAYMENT', 'QUEUED', 'REDEEMING', 'MANUAL_REVIEW'];
 
 let recent = [];
+let refreshTimer;
 try { recent = JSON.parse(localStorage.getItem('orders') || '[]'); } catch {}
 
 const EMPTY = `<div class="empty">
@@ -94,20 +99,44 @@ async function load() {
     if (status === 'PENDING_PAYMENT' && d.expire_at < Date.now()) label = '已过期';
     if (status === 'FAILED' && d.can_submit_token) label = '待重新提交 Token';
     const cls = status === 'FAILED' && d.can_submit_token ? 's-PAID' : `s-${status}`;
-    return `<a class="row-o" href="/order.html?no=${encodeURIComponent(no)}&key=${encodeURIComponent(key)}">
-      <div class="main">
-        <div class="top"><span class="pn">${esc(d ? shortName(d.plan_name) : plan || '订单')}</span><span class="badge ${cls}">${label}</span></div>
-        <div class="meta"><code>${esc(no)}</code><span class="t">${new Date(d?.created_at || t).toLocaleString()}</span></div>
-      </div>
-      ${d ? `<span class="amt">¥${yuan(d.amount_cents)}</span>` : ''}
-      <span class="chev">›</span></a>`;
+    const href = `/order.html?no=${encodeURIComponent(no)}&key=${encodeURIComponent(key)}`;
+    // 还在支付期限内的待支付订单可以取消
+    const cancellable = d?.can_cancel && d.expire_at > Date.now();
+    return `<div class="row-o">
+      <a class="row-link" href="${href}">
+        <div class="main">
+          <div class="top"><span class="pn">${esc(d ? shortName(d.plan_name) : plan || '订单')}</span><span class="badge ${cls}">${label}</span></div>
+          <div class="meta"><code>${esc(no)}</code><span class="t">${new Date(d?.created_at || t).toLocaleString()}</span></div>
+        </div>
+        ${d ? `<span class="amt">¥${yuan(d.amount_cents)}</span>` : ''}
+      </a>
+      ${cancellable ? `<button class="ghost sm cancel" type="button" data-no="${esc(no)}" data-key="${esc(key)}">取消</button>` : ''}
+      <a class="chev" href="${href}" tabindex="-1" aria-hidden="true">›</a></div>`;
   }).join('');
 
   // 有进行中的订单时自动刷新状态
   if (list.some(({ d }) => d && BUSY.includes(d.status) && !(d.status === 'PENDING_PAYMENT' && d.expire_at < Date.now()))) {
-    setTimeout(load, 5000);
+    refreshTimer = setTimeout(load, 5000);
   }
 }
+
+// 取消订单（列表每次刷新都会重画，所以把点击事件挂在外层容器上）
+$('#list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.cancel');
+  if (!btn) return;
+  if (!confirm('确定取消这笔订单吗？取消后付款码会失效。')) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/orders/${encodeURIComponent(btn.dataset.no)}/cancel`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: btn.dataset.key }),
+    });
+    const d = await r.json();
+    // 取消不了的常见原因是其实已经付款了：提示一下，下面会重新读取最新状态
+    if (!r.ok) alert(d.error);
+  } catch { alert('网络异常，请稍后再试'); }
+  clearTimeout(refreshTimer);
+  load();
+});
 
 addEventListener('scroll', () => $('#topnav').classList.toggle('scrolled', scrollY > 8), { passive: true });
 load();
