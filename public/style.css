@@ -171,3 +171,33 @@ details summary { cursor: pointer; }
   .sp-panel, .sp-panel.open, .sp-mask { transition: none; }
 }
 .sp-tip { margin: 0; padding: 12px 20px; font-size: 14px; font-weight: 500; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); border-bottom: 1px solid var(--line); }
+
+/* ===== 页面之间的切换 =====
+   这几个页面是各自独立的网页，点击导航时整页重新加载。这里让浏览器在新旧页面之间做过渡：
+   旧页面的内容先淡出，新页面的内容稍微上移着淡入。
+   导航栏和客服按钮单独命名：它们在每个页面上位置相同，切换时原地不动，只有中间的内容在变。
+   不支持这个特性的浏览器会忽略这段样式，照旧直接跳转。 */
+@view-transition { navigation: auto; }
+main { view-transition-name: page; }
+.topnav { view-transition-name: topnav; }
+.sp-fab { view-transition-name: support-fab; }
+
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes page-in-plain { from { opacity: 0; } }
+/* 旧内容快一点退场，新内容等它差不多消失了再进来，时间长一点、用减速曲线，看起来是「让位」而不是「叠在一起」 */
+::view-transition-old(page) { animation: page-out .14s ease-in both; }
+::view-transition-new(page) { animation: page-in .38s cubic-bezier(.2, .7, .2, 1) .1s both; }
+/* 内容区的高度每页不同，不让外框做拉伸动画，直接用新页面的尺寸 */
+::view-transition-group(page) { animation: none; }
+/* 背景、页脚等其余部分：简单交叉淡化 */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .3s; }
+
+/* 内容从接口加载出来时用同样的方式出现，代替突然冒出来 */
+.fade-in { animation: page-in .34s cubic-bezier(.2, .7, .2, 1) both; }
+
+/* 用户在系统里选择了「减少动态效果」时：保留淡入淡出，去掉位移 */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(page) { animation: page-in-plain .2s ease both; }
+  .fade-in { animation: page-in-plain .2s ease both; }
+}
