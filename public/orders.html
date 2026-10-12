@@ -7,7 +7,21 @@
   <title>我的订单 - GPT 速充</title>
   <link rel="icon" type="image/svg+xml" href="/brand/gptsuchong-logo.svg">
   <link rel="stylesheet" href="/style.css">
-  <style>
+  <script>
+  // 尽早记下页面开始显示的时刻。页面脚本用它来避开两件事：
+  // 在首次显示之前做较重的工作（浏览器会因此放弃过渡动画），以及在淡入途中改动内容
+  window.pageReady = new Promise((done) => {
+    if (!('onpagereveal' in window)) return done();
+    addEventListener('pagereveal', (e) => {
+      window.pageRevealed = true;
+      done(e.viewTransition ? e.viewTransition.finished.catch(() => {}) : undefined);
+    }, { once: true });
+  });
+  </script>
+  <script type="speculationrules">
+  {"prefetch":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/admin*"}},{"not":{"href_matches":"/api/*"}},{"not":{"href_matches":"/mock-pay/*"}}]},"eagerness":"moderate"}]}
+  </script>
+  <style data-page>
     main { min-height: calc(100vh - 64px - 90px); }
     .list { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
     .row-o { display: flex; align-items: center; gap: 16px; padding: 18px 22px; transition: background .15s; }
@@ -43,9 +57,9 @@
   <div class="container">
     <a class="logo" href="/" aria-label="GPT 速充首页"><span class="brand-icon" aria-hidden="true"></span><span>GPT 速充</span></a>
     <nav>
-      <a href="/">套餐</a>
-      <a href="/orders.html" class="active">我的订单</a>
-      <a href="/#faq">常见问题</a>
+      <a href="/">套餐<i></i></a>
+      <a href="/orders.html" class="active">我的订单<i></i></a>
+      <a href="/#faq">常见问题<i></i></a>
     </nav>
   </div>
 </header>
@@ -62,112 +76,117 @@
 
 <footer class="foot">本站为第三方充值服务，与 OpenAI 无关</footer>
 
-<script>
-const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
-const shortName = (n) => n.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || n;
-const STATUS = {
-  PENDING_PAYMENT: '待支付', PAID: '待填写 Token', QUEUED: '充值中', REDEEMING: '充值中', MANUAL_REVIEW: '处理中',
-  SUCCESS: '充值成功', FAILED: '充值失败', EXPIRED: '已过期', CANCELLED: '已取消', REFUNDED: '已退款',
-};
-// 时间自己拼，不用 toLocaleString()：浏览器第一次调用它要加载本地化数据，
-// 这点耗时发生在页面首次显示之前，会让浏览器放弃从上一页切过来的过渡动画
-const pad = (n) => String(n).padStart(2, '0');
-const fmtTime = (ms) => { const d = new Date(ms); return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const BUSY = ['PENDING_PAYMENT', 'QUEUED', 'REDEEMING', 'MANUAL_REVIEW'];
+<script src="/nav.js"></script>
+<script data-page>
+definePage('/orders.html', (page) => {
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const yuan = (c) => (c / 100).toFixed(2).replace(/\.00$/, '');
+  const shortName = (n) => n.replace(/^ChatGPT\s*/i, '').replace(/\s*\d+\s*个?月$/, '') || n;
+  const STATUS = {
+    PENDING_PAYMENT: '待支付', PAID: '待填写 Token', QUEUED: '充值中', REDEEMING: '充值中', MANUAL_REVIEW: '处理中',
+    SUCCESS: '充值成功', FAILED: '充值失败', EXPIRED: '已过期', CANCELLED: '已取消', REFUNDED: '已退款',
+  };
+  // 时间自己拼，不用 toLocaleString()：浏览器第一次调用它要加载本地化数据，
+  // 这点耗时发生在页面首次显示之前，会让浏览器放弃从上一页切过来的过渡动画
+  const pad = (n) => String(n).padStart(2, '0');
+  const fmtTime = (ms) => { const d = new Date(ms); return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const BUSY = ['PENDING_PAYMENT', 'QUEUED', 'REDEEMING', 'MANUAL_REVIEW'];
 
-let recent = [];
-let refreshTimer;
-try { recent = JSON.parse(localStorage.getItem('orders') || '[]'); } catch {}
+  let recent = [];
+  let refreshTimer;
+  try { recent = JSON.parse(localStorage.getItem('orders') || '[]'); } catch {}
 
-const EMPTY = `<div class="empty">
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7l2-4z"/><path d="M4 7h16M9 11a3 3 0 0 0 6 0"/></svg>
-  <h3>还没有订单</h3><p>选择套餐并完成支付后，订单会显示在这里</p>
-  <a class="btn" href="/">去选择套餐</a></div>`;
+  const EMPTY = `<div class="empty">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7l2-4z"/><path d="M4 7h16M9 11a3 3 0 0 0 6 0"/></svg>
+    <h3>还没有订单</h3><p>选择套餐并完成支付后，订单会显示在这里</p>
+    <a class="btn" href="/">去选择套餐</a></div>`;
 
-/** 画出订单列表。d 是从服务端读到的订单；还没读到时为 undefined，先用浏览器里存的套餐名、订单号和时间占位 */
-function paint(list) {
-  $('#list').innerHTML = list.map(({ no, key, t, plan, d }) => {
-    const status = d?.status;
-    let label = STATUS[status] || (d === undefined ? '…' : '查看');
-    if (status === 'PENDING_PAYMENT' && d.expire_at < Date.now()) label = '已过期';
-    if (status === 'FAILED' && d.can_submit_token) label = '待重新提交 Token';
-    const cls = status === 'FAILED' && d.can_submit_token ? 's-PAID' : `s-${status}`;
-    const href = `/order.html?no=${encodeURIComponent(no)}&key=${encodeURIComponent(key)}`;
-    // 还在支付期限内的待支付订单可以取消
-    const cancellable = d?.can_cancel && d.expire_at > Date.now();
-    return `<div class="row-o">
-      <a class="row-link" href="${href}">
-        <div class="main">
-          <div class="top"><span class="pn">${esc(d ? shortName(d.plan_name) : plan || '订单')}</span><span class="badge ${cls}">${label}</span></div>
-          <div class="meta"><code>${esc(no)}</code><span class="t">${fmtTime(d?.created_at || t)}</span></div>
-        </div>
-        ${d ? `<span class="amt">¥${yuan(d.amount_cents)}</span>` : ''}
-      </a>
-      ${cancellable ? `<button class="ghost sm cancel" type="button" data-no="${esc(no)}" data-key="${esc(key)}">取消</button>` : ''}
-      <a class="chev" href="${href}" tabindex="-1" aria-hidden="true">›</a></div>`;
-  }).join('');
-}
+  /** 画出订单列表。d 是从服务端读到的订单；还没读到时为 undefined，先用浏览器里存的套餐名、订单号和时间占位 */
+  function paint(list) {
+    $('#list').innerHTML = list.map(({ no, key, t, plan, d }) => {
+      const status = d?.status;
+      let label = STATUS[status] || (d === undefined ? '…' : '查看');
+      if (status === 'PENDING_PAYMENT' && d.expire_at < Date.now()) label = '已过期';
+      if (status === 'FAILED' && d.can_submit_token) label = '待重新提交 Token';
+      const cls = status === 'FAILED' && d.can_submit_token ? 's-PAID' : `s-${status}`;
+      const href = `/order.html?no=${encodeURIComponent(no)}&key=${encodeURIComponent(key)}`;
+      // 还在支付期限内的待支付订单可以取消
+      const cancellable = d?.can_cancel && d.expire_at > Date.now();
+      return `<div class="row-o">
+        <a class="row-link" href="${href}">
+          <div class="main">
+            <div class="top"><span class="pn">${esc(d ? shortName(d.plan_name) : plan || '订单')}</span><span class="badge ${cls}">${label}</span></div>
+            <div class="meta"><code>${esc(no)}</code><span class="t">${fmtTime(d?.created_at || t)}</span></div>
+          </div>
+          ${d ? `<span class="amt">¥${yuan(d.amount_cents)}</span>` : ''}
+        </a>
+        ${cancellable ? `<button class="ghost sm cancel" type="button" data-no="${esc(no)}" data-key="${esc(key)}">取消</button>` : ''}
+        <a class="chev" href="${href}" tabindex="-1" aria-hidden="true">›</a></div>`;
+    }).join('');
+  }
 
-// 从别的页面切过来时有一段淡入的过渡。接口往往在过渡还没结束时就返回了，
-// 这时如果马上改动列表，内容会在淡入的途中被换掉。所以先等过渡结束再更新
-let revealed = Promise.resolve();
-addEventListener('pagereveal', (e) => {
-  if (e.viewTransition) revealed = e.viewTransition.finished.catch(() => {});
-});
+  async function load() {
+    if (!recent.length) return ($('#list').innerHTML = EMPTY);
+    const gone = [];
+    const rows = await Promise.all(recent.map(async (o) => {
+      try {
+        const r = await fetch(`/api/orders/${encodeURIComponent(o.no)}?key=${encodeURIComponent(o.key)}`);
+        if (r.status === 404) gone.push(o.no);
+        return r.ok ? { ...o, d: await r.json() } : null;
+      } catch { return { ...o, d: null }; }
+    }));
+    // 服务端已经没有的订单：从浏览器的记录里去掉，下次打开就不会再先显示它、随后又消失
+    if (gone.length) {
+      recent = recent.filter((o) => !gone.includes(o.no));
+      try { localStorage.setItem('orders', JSON.stringify(recent)); } catch {}
+    }
+    // 接口往往在进入页面的过渡还没结束时就返回了，这时马上改动列表，内容会在淡入的途中被换掉，所以等过渡结束
+    await page.ready;
+    // 等待期间用户已经离开这个页面：不要再去动页面上的东西
+    if (!page.alive) return;
+    const list = rows.filter(Boolean);
+    if (!list.length) return ($('#list').innerHTML = EMPTY);
+    paint(list);
 
-async function load() {
-  if (!recent.length) return ($('#list').innerHTML = EMPTY);
-  const gone = [];
-  const rows = await Promise.all(recent.map(async (o) => {
+    // 有进行中的订单时自动刷新状态
+    if (list.some(({ d }) => d && BUSY.includes(d.status) && !(d.status === 'PENDING_PAYMENT' && d.expire_at < Date.now()))) {
+      refreshTimer = page.timeout(load, 5000);
+    }
+  }
+
+  // 打开页面时不等接口：订单的套餐名、订单号、时间浏览器里本来就存着，直接画出来，
+  // 这样从别的页面切过来时列表是跟着页面一起出现的，不会先看到一个转圈。
+  // 画的时机放在浏览器「即将显示页面」的那一刻（pagereveal）：在那之前做较重的工作，
+  // 浏览器会认为新页面准备得太慢，直接放弃从上一页切过来的过渡动画。
+  function paintLocal() {
+    if (recent.length) paint(recent);
+    else $('#list').innerHTML = EMPTY;
+  }
+  // 站内切换进来的（page.soft）没有这个限制，直接画
+  if (page.soft || !('onpagereveal' in window) || window.pageRevealed) paintLocal();
+  else page.on(window, 'pagereveal', paintLocal, { once: true });
+
+  // 取消订单（列表每次刷新都会重画，所以把点击事件挂在外层容器上）
+  $('#list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.cancel');
+    if (!btn) return;
+    if (!confirm('确定取消这笔订单吗？取消后付款码会失效。')) return;
+    btn.disabled = true;
     try {
-      const r = await fetch(`/api/orders/${encodeURIComponent(o.no)}?key=${encodeURIComponent(o.key)}`);
-      if (r.status === 404) gone.push(o.no);
-      return r.ok ? { ...o, d: await r.json() } : null;
-    } catch { return { ...o, d: null }; }
-  }));
-  // 服务端已经没有的订单：从浏览器的记录里去掉，下次打开就不会再先显示它、随后又消失
-  if (gone.length) {
-    recent = recent.filter((o) => !gone.includes(o.no));
-    try { localStorage.setItem('orders', JSON.stringify(recent)); } catch {}
-  }
-  await revealed;
-  const list = rows.filter(Boolean);
-  if (!list.length) return ($('#list').innerHTML = EMPTY);
-  paint(list);
+      const r = await fetch(`/api/orders/${encodeURIComponent(btn.dataset.no)}/cancel`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: btn.dataset.key }),
+      });
+      const d = await r.json();
+      // 取消不了的常见原因是其实已经付款了：提示一下，下面会重新读取最新状态
+      if (!r.ok) alert(d.error);
+    } catch { alert('网络异常，请稍后再试'); }
+    clearTimeout(refreshTimer);
+    load();
+  });
 
-  // 有进行中的订单时自动刷新状态
-  if (list.some(({ d }) => d && BUSY.includes(d.status) && !(d.status === 'PENDING_PAYMENT' && d.expire_at < Date.now()))) {
-    refreshTimer = setTimeout(load, 5000);
-  }
-}
-
-// 打开页面时不等接口：订单的套餐名、订单号、时间浏览器里本来就存着，立刻画出来，
-// 这样从别的页面切过来时列表是跟着页面一起出现的，不会先看到一个转圈
-if (recent.length) paint(recent);
-else $('#list').innerHTML = EMPTY;
-
-// 取消订单（列表每次刷新都会重画，所以把点击事件挂在外层容器上）
-$('#list').addEventListener('click', async (e) => {
-  const btn = e.target.closest('.cancel');
-  if (!btn) return;
-  if (!confirm('确定取消这笔订单吗？取消后付款码会失效。')) return;
-  btn.disabled = true;
-  try {
-    const r = await fetch(`/api/orders/${encodeURIComponent(btn.dataset.no)}/cancel`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: btn.dataset.key }),
-    });
-    const d = await r.json();
-    // 取消不了的常见原因是其实已经付款了：提示一下，下面会重新读取最新状态
-    if (!r.ok) alert(d.error);
-  } catch { alert('网络异常，请稍后再试'); }
-  clearTimeout(refreshTimer);
   load();
 });
-
-addEventListener('scroll', () => $('#topnav').classList.toggle('scrolled', scrollY > 8), { passive: true });
-load();
 </script>
 <script src="/support.js" defer></script>
 </body>

@@ -115,9 +115,12 @@ details summary { cursor: pointer; }
 .topnav .container { height: 64px; display: flex; align-items: center; justify-content: space-between; }
 .topnav .logo { font-size: 20px; font-weight: 600; text-decoration: none; letter-spacing: -.01em; }
 .topnav nav { display: flex; gap: 28px; height: 100%; }
-.topnav nav a { display: flex; align-items: center; font-size: 15px; color: var(--text-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.topnav nav a { position: relative; display: flex; align-items: center; font-size: 15px; font-weight: 500; color: var(--text-2); text-decoration: none; transition: color .15s; }
 .topnav nav a:hover { color: var(--text); }
-.topnav nav a.active { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
+.topnav nav a.active { color: var(--text); }
+/* 表示「当前页」的那条线。每个导航项里都有一个，只有当前项的显示出来 */
+.topnav nav a i { display: none; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--text); }
+.topnav nav a.active i { display: block; }
 
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 28px 0 36px; }
 .page-title { text-align: center; padding: 40px 0 28px; }
@@ -173,31 +176,48 @@ details summary { cursor: pointer; }
 .sp-tip { margin: 0; padding: 12px 20px; font-size: 14px; font-weight: 500; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); border-bottom: 1px solid var(--line); }
 
 /* ===== 页面之间的切换 =====
-   这几个页面是各自独立的网页，点击导航时整页重新加载。这里让浏览器在新旧页面之间做过渡：
-   旧页面的内容先淡出，新页面的内容稍微上移着淡入。
-   导航栏和客服按钮单独命名：它们在每个页面上位置相同，切换时原地不动，只有中间的内容在变。
+   这几个页面是各自独立的网页，点击导航时整页重新加载；这里让浏览器在新旧页面之间补出过渡。
+   设计上是一个连贯的动作，分三层：
+     1. 内容区：旧内容向上退场的同时，新内容已经开始显现，两者有一段重叠，中间不留空白
+     2. 新页面里标题先到位，正文晚一拍跟上，而不是整块一起动
+     3. 导航栏原地不动，只有表示「当前页」的那条线从原来的位置滑到新位置
    不支持这个特性的浏览器会忽略这段样式，照旧直接跳转。 */
 @view-transition { navigation: auto; }
 main { view-transition-name: page; }
 .topnav { view-transition-name: topnav; }
 .sp-fab { view-transition-name: support-fab; }
+.topnav nav a.active i { view-transition-name: nav-line; }
 
-@keyframes page-out { to { opacity: 0; } }
-@keyframes page-in { from { opacity: 0; transform: translateY(12px); } }
-@keyframes page-in-plain { from { opacity: 0; } }
-/* 旧内容快一点退场，新内容等它差不多消失了再进来，时间长一点、用减速曲线，看起来是「让位」而不是「叠在一起」 */
-::view-transition-old(page) { animation: page-out .14s ease-in both; }
-::view-transition-new(page) { animation: page-in .38s cubic-bezier(.2, .7, .2, 1) .1s both; }
-/* 内容区的高度每页不同，不让外框做拉伸动画，直接用新页面的尺寸 */
+:root {
+  --ease-out: cubic-bezier(.22, .68, .2, 1);
+  --ease-in: cubic-bezier(.5, 0, .9, .4);
+}
+
+@keyframes page-out { to { opacity: 0; transform: translateY(-10px); } }
+@keyframes page-in { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+
+::view-transition-old(page) { animation: page-out .22s var(--ease-in) both; }
+::view-transition-new(page) { animation: page-in .28s ease-out .06s both; }
+/* 内容区的高度每页不同，外框不做拉伸，直接用新页面的尺寸 */
 ::view-transition-group(page) { animation: none; }
-/* 背景、页脚等其余部分：简单交叉淡化 */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .3s; }
 
-/* 内容从接口加载出来时用同样的方式出现，代替突然冒出来 */
-.fade-in { animation: page-in .34s cubic-bezier(.2, .7, .2, 1) both; }
+/* 导航里的那条线：位置和宽度由浏览器在新旧两处之间补出来 */
+::view-transition-group(nav-line) { animation-duration: .42s; animation-timing-function: var(--ease-out); }
+/* 新旧两条线颜色相同，让它们都铺满正在移动的外框，避免按原始比例缩放时变粗变细 */
+::view-transition-old(nav-line), ::view-transition-new(nav-line) { height: 100%; }
 
-/* 用户在系统里选择了「减少动态效果」时：保留淡入淡出，去掉位移 */
+/* 新页面的内容：标题先到，正文晚一拍。直接打开页面时也是这个出场方式 */
+.topnav ~ main > * { animation: rise .52s var(--ease-out) both; }
+.topnav ~ main > :first-child { animation-delay: .05s; }
+.topnav ~ main > :not(:first-child) { animation-delay: .13s; }
+
+/* 之后从接口加载出来的内容（如订单详情）用同一种方式出现 */
+.fade-in { animation: rise .42s var(--ease-out) both; }
+
+/* 用户在系统里选择了「减少动态效果」时：只保留淡入淡出，去掉所有位移 */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-new(page) { animation: page-in-plain .2s ease both; }
-  .fade-in { animation: page-in-plain .2s ease both; }
+  ::view-transition-old(page) { animation: page-in .15s ease reverse both; }
+  ::view-transition-group(nav-line) { animation-duration: .01s; }
+  .topnav ~ main > *, .fade-in { animation: page-in .2s ease both; animation-delay: 0s; }
 }
