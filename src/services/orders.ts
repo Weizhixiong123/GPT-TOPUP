@@ -248,7 +248,7 @@ export function publicView(o: Order): PublicOrderView {
     amount_cents: o.amount_cents,
     pay_channel: o.pay_channel,
     pay_qr: isLink ? null : payable,
-    pay_link: isLink ? payable : null,
+    pay_link: isLink ? payments.get(o.pay_channel).refreshLink?.(payable) ?? payable : null,
     status: o.status,
     message: o.message,
     token_mask: o.token_mask,

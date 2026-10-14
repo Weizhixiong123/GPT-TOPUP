@@ -108,6 +108,14 @@ async function call(path: string, biz: Record<string, string>): Promise<EpayResp
 const yuan = (cents: number): string => (cents / 100).toFixed(2);
 const cents = (yuanStr: unknown): number => Math.round(Number(yuanStr) * 100);
 
+/** 页面跳转支付由用户浏览器发起，链接只包含业务参数和签名，不包含私钥。 */
+function submitUrl(biz: Record<string, string>): string {
+  const params: Record<string, string> = { pid: cfg.pid, ...biz, timestamp: timestamp() };
+  params.sign = sign(params);
+  params.sign_type = 'RSA';
+  return `${cfg.apiUrl}/api/pay/submit?${new URLSearchParams(params)}`;
+}
+
 /** 二维码内容（微信 weixin://、支付宝 qr.alipay.com）在页面上画成二维码；其他链接给出跳转按钮 */
 const QR_CONTENT = /^(weixin:\/\/|wxp:\/\/|https?:\/\/qr\.alipay\.com\/|alipays?:\/\/)/i;
 
@@ -134,14 +142,16 @@ export function createEpayProvider(name: Extract<PayChannel, 'alipay' | 'wechat'
         money: yuan(amountCents),
         clientip: clientIp || '127.0.0.1',
       };
-      // 手机：用「跳转支付」，平台只返回一个付款链接。用户在手机上打开后，由平台按真实的手机环境
-      // 决定走支付宝 / 微信 H5 还是收银台（易支付文档推荐的做法）。
-      // 不用 web + device=mobile：实测这个商户的通道对它返回「系统异常无法完成付款」，
-      // 而失败后再用同一个订单号重下，平台可能当作重复订单拒绝，所以手机上直接走 jump。
+      // 手机直接进入页面跳转支付，不再从服务器调用 create + jump。
+      // 通道选择在用户的真实浏览器环境中进行，避免服务器下单阶段直接失败。
+      if (mobile) {
+        const { clientip: _clientip, ...submit } = base;
+        return { qr: submitUrl(submit) };
+      }
       // 电脑：通用网页支付，平台返回二维码内容或付款页链接（页面上都会画成二维码）
-      let r = await call('/api/pay/create', mobile ? { ...base, method: 'jump' } : { ...base, method: 'web', device: 'pc' });
+      let r = await call('/api/pay/create', { ...base, method: 'web', device: 'pc' });
       // 返回的是我们无法直接展示的形式（如 html 表单），改用只返回跳转链接的方式再下一次
-      if (!mobile && Number(r.code) === 0 && !['qrcode', 'jump', 'urlscheme'].includes(String(r.pay_type))) {
+      if (Number(r.code) === 0 && !['qrcode', 'jump', 'urlscheme'].includes(String(r.pay_type))) {
         r = await call('/api/pay/create', { ...base, method: 'jump' });
       }
       if (Number(r.code) !== 0 || !r.pay_info) throw new Error(`易支付下单失败: ${r.msg || `code=${r.code}`}`);
@@ -149,6 +159,19 @@ export function createEpayProvider(name: Extract<PayChannel, 'alipay' | 'wechat'
     },
 
     isLink: (payQr) => !QR_CONTENT.test(payQr),
+
+    refreshLink(payQr) {
+      if (!URL.canParse(payQr)) return payQr;
+      const url = new URL(payQr);
+      const endpoint = new URL(`${cfg.apiUrl}/api/pay/submit`);
+      if (url.origin !== endpoint.origin || url.pathname !== endpoint.pathname) return payQr;
+      // 用户稍后回来付款时使用新时间戳，避免存储的跳转链接因签名时间过旧而失效。
+      const params = Object.fromEntries(url.searchParams);
+      delete params.sign;
+      delete params.sign_type;
+      delete params.timestamp;
+      return submitUrl(params);
+    },
 
     async query(orderNo) {
       const r = await call('/api/pay/query', { out_trade_no: orderNo });

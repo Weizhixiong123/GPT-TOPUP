@@ -112,6 +112,8 @@ export interface PaymentProvider {
   createQr(params: CreateQrParams): Promise<{ qr: string }>;
   /** pay_qr 是不是一个需要跳转打开的收银台链接（而不是二维码内容）。不实现则一律当作二维码 */
   isLink?(payQr: string): boolean;
+  /** 更新付款链接的时效性参数；不得创建新的交易。 */
+  refreshLink?(payQr: string): string;
   query(orderNo: string): Promise<PaymentResult>;
   /** 关闭一笔未支付的交易，使付款码 / 付款链接失效。交易在支付平台上还不存在也算成功。mock 不需要 */
   close?(orderNo: string): Promise<void>;
