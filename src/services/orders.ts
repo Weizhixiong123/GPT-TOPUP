@@ -54,7 +54,11 @@ export async function listPlans() {
   return rows.map(({ sellable, ...p }) => ({ ...p, in_stock: sellable > 0, manual: isManualPlan(p.id) }));
 }
 
-export async function createOrder(planId: number, channel: string, clientIp = '', mobile = false): Promise<Order> {
+/**
+ * @param clientIp 限流用的客户端标识（IPv6 已按 /64 归并），用于「同一 IP 未支付订单上限」
+ * @param payerIp  付款用户的原始 IP，传给支付平台（易支付下单必填）
+ */
+export async function createOrder(planId: number, channel: string, clientIp = '', mobile = false, payerIp = ''): Promise<Order> {
   if (!Number.isInteger(planId)) throw new HttpError(404, '套餐不存在');
   const plan = await get<Plan>('SELECT * FROM plans WHERE id = $1 AND active = 1', planId);
   if (!plan) throw new HttpError(404, '套餐不存在');
@@ -105,6 +109,7 @@ export async function createOrder(planId: number, channel: string, clientIp = ''
       subject: plan.name,
       expireAt: order.expire_at,
       mobile,
+      clientIp: payerIp,
     });
     await run('UPDATE orders SET pay_qr = $1, updated_at = $2 WHERE id = $3', qr, now(), order.id);
     return { ...order, pay_qr: qr };
@@ -217,8 +222,6 @@ export interface PublicOrderView {
   pay_qr_image?: string;
   /** 收银台链接：有值时页面不自己画二维码 */
   pay_link: string | null;
-  /** pay_link 是否用来嵌在页面里（支付平台返回的二维码小页面）；否则给出跳转按钮 */
-  pay_embed: boolean;
   status: OrderStatus;
   message: string;
   token_mask: string | null;
@@ -246,7 +249,6 @@ export function publicView(o: Order): PublicOrderView {
     pay_channel: o.pay_channel,
     pay_qr: isLink ? null : payable,
     pay_link: isLink ? payable : null,
-    pay_embed: isLink && payments.get(o.pay_channel).isEmbed?.(payable ?? '') === true,
     status: o.status,
     message: o.message,
     token_mask: o.token_mask,

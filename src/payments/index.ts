@@ -1,10 +1,14 @@
 import config from '../config.ts';
 import { HttpError, type PayChannel, type PaymentProvider } from '../types.ts';
 import mock from './mock.ts';
-import alipay from './alipay.ts';
-import wechat from './wechat.ts';
+import { createEpayProvider } from './epay.ts';
 
-const all: Record<PayChannel, PaymentProvider> = { mock, alipay, wechat };
+// 支付宝、微信都通过易支付收款（同一个易支付商户，下单时 type 不同）
+const all: Record<PayChannel, PaymentProvider> = {
+  mock,
+  alipay: createEpayProvider('alipay', '支付宝', 'alipay'),
+  wechat: createEpayProvider('wechat', '微信支付', 'wxpay'),
+};
 
 export const enabled: readonly PayChannel[] = config.payment.enabled;
 

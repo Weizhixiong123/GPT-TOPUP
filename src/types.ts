@@ -97,21 +97,8 @@ export interface CreateQrParams {
   expireAt: number;
   /** 下单的设备是不是手机：有的渠道电脑和手机走不同的支付产品 */
   mobile?: boolean;
-}
-
-/** 回调所需的最小请求信息，便于脱离 Express 单独测试 */
-export interface NotifyRequest {
-  body?: Record<string, string>;
-  rawBody?: string;
-  get(header: string): string | undefined;
-}
-
-export interface NotifyResponder {
-  status(code: number): NotifyResponder;
-  type(t: string): NotifyResponder;
-  send(body: string): unknown;
-  json(body: unknown): unknown;
-  end(): unknown;
+  /** 付款用户的 IP（易支付下单必填） */
+  clientIp?: string;
 }
 
 export interface PaymentProvider {
@@ -125,15 +112,9 @@ export interface PaymentProvider {
   createQr(params: CreateQrParams): Promise<{ qr: string }>;
   /** pay_qr 是不是一个需要跳转打开的收银台链接（而不是二维码内容）。不实现则一律当作二维码 */
   isLink?(payQr: string): boolean;
-  /** 这个收银台链接是不是只返回一个二维码、专门用来嵌在我们页面里的（而不是完整的收银台页面） */
-  isEmbed?(payQr: string): boolean;
   query(orderNo: string): Promise<PaymentResult>;
   /** 关闭一笔未支付的交易，使付款码 / 付款链接失效。交易在支付平台上还不存在也算成功。mock 不需要 */
   close?(orderNo: string): Promise<void>;
-  /** 只有支持异步通知的渠道才需要实现（mock 没有） */
-  parseNotify?(req: NotifyRequest): PaymentNotify;
-  ackSuccess?(res: NotifyResponder): unknown;
-  ackFail?(res: NotifyResponder): unknown;
 }
 
 // ============ 上游兑换 ============

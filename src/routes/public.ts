@@ -4,8 +4,9 @@ import config from '../config.ts';
 import * as payments from '../payments/index.ts';
 import mockPay from '../payments/mock.ts';
 import * as orders from '../services/orders.ts';
+import { parseNotify as parseEpayNotify } from '../payments/epay.ts';
 import { ipKey, rateLimit } from '../ratelimit.ts';
-import { HttpError, type NotifyRequest } from '../types.ts';
+import { HttpError } from '../types.ts';
 
 const router = express.Router();
 const wrap =
@@ -72,7 +73,9 @@ router.post(
   wrap(async (req, res) => {
     // 「同一 IP 未支付订单上限」与限流用同一个标识（IPv6 按 /64 归并）
     const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(req.get('user-agent') ?? '');
-    const order = await orders.createOrder(Number(req.body.plan_id), str(req.body.channel), ipKey(req.ip), mobile);
+    // 付款用户的真实 IP（易支付下单要求传），IPv4 映射地址去掉 ::ffff: 前缀
+    const payerIp = (req.ip ?? '').replace(/^::ffff:/i, '');
+    const order = await orders.createOrder(Number(req.body.plan_id), str(req.body.channel), ipKey(req.ip), mobile, payerIp);
     res.json({ order_no: order.order_no, access_key: order.access_key });
   }),
 );
@@ -120,36 +123,35 @@ router.post(
   }),
 );
 
-// ---------- 支付回调 ----------
-for (const name of ['alipay', 'wechat'] as const) {
-  router.post(
-    `/notify/${name}`,
-    // 回调每次都要做 RSA 验签，限制单 IP 频率防止被刷 CPU（正常回调量远低于此）
-    rateLimit(`notify-${name}`, [{ scope: 'ip', max: 300, windowMs: MIN }]),
-    // 支付宝回调是表单格式；只在这里启用表单解析
-    express.urlencoded({ extended: false, limit: '64kb' }),
-    wrap(async (req, res) => {
-      if (!payments.isEnabled(name)) {
-        res.status(404).end();
-        return;
-      }
-      const provider = payments.get(name);
-      if (!provider.parseNotify || !provider.ackSuccess || !provider.ackFail) {
-        res.status(404).end();
-        return;
-      }
-      try {
-        const n = provider.parseNotify(req as unknown as NotifyRequest);
-        // 必须等入库完成再应答成功：入库失败时返回失败，支付平台会重发通知
-        if (n.paid) await orders.markPaid(n.orderNo, n, 'notify');
-        provider.ackSuccess(res);
-      } catch (e) {
-        console.error(`[notify:${name}]`, (e as Error).message);
-        provider.ackFail(res);
-      }
-    }),
-  );
-}
+// ---------- 支付回调（易支付：支付宝、微信共用一个通知地址）----------
+// 易支付用 GET 发送通知；也兼容 POST 表单，以防平台调整
+router.all(
+  '/notify/epay',
+  // 回调每次都要做 RSA 验签，限制单 IP 频率防止被刷 CPU（正常回调量远低于此）
+  rateLimit('notify-epay', [{ scope: 'ip', max: 300, windowMs: MIN }]),
+  // 表单解析只在回调这里启用，其他接口只接受 JSON
+  express.urlencoded({ extended: false, limit: '64kb' }),
+  wrap(async (req, res) => {
+    if (!payments.isEnabled('alipay') && !payments.isEnabled('wechat')) {
+      res.status(404).end();
+      return;
+    }
+    // 只取字符串参数（同名参数重复出现时 Express 会解析成数组，这类直接丢弃）
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries({ ...(req.query as Record<string, unknown>), ...((req.body ?? {}) as Record<string, unknown>) })) {
+      if (typeof v === 'string') params[k] = v;
+    }
+    try {
+      const n = parseEpayNotify(params);
+      // 必须等入库完成再应答 success：入库失败时应答 fail，易支付会重发通知
+      if (n.paid) await orders.markPaid(n.orderNo, n, 'notify');
+      res.type('text').send('success');
+    } catch (e) {
+      console.error('[notify:epay]', (e as Error).message);
+      res.type('text').send('fail');
+    }
+  }),
+);
 
 export default router;
 

@@ -43,16 +43,17 @@ PENDING_PAYMENT ──支付回调/主动查询──▶ PAID ──用户提交
 | 重复提交上游 | Worker 用乐观租约（`next_run_at`）抢占订单，多实例部署也安全 |
 | 后台操作与 Worker 冲突 | Worker 的每次写入都校验租约；处理期间订单被后台改动时放弃本次结果，并记录 `WORKER_CONFLICT` 日志 |
 | 支付回调丢失 | 用户轮询和 Worker 每 30 秒都会主动查询支付状态 |
-| 回调伪造或重放 | 支付宝 RSA2 验签 + 校验 app_id；微信 v3 验签 + 时间戳校验 + AES-GCM 解密 + 校验商户号；两者都校验金额；状态更新幂等 |
+| 回调伪造或重放 | 易支付通知做 RSA（SHA256WithRSA）验签 + 校验商户号 + 校验金额；下单、查单的返回数据同样验签；状态更新幂等 |
 | 结果不确定（超时、网络错误） | **绝不换卡**，用同一张卡重试，超过次数转人工；重试后上游返回「卡密已使用」时也转人工（可能正是本单已用掉的） |
 | Token 安全 | AES-256-GCM 加密存储，页面只显示掩码，订单到终态后立即删除 |
 | 订单越权查看 | 订单号 + 随机 `access_key` 双重校验 |
 
 ## 接入真实环境
 
-1. **支付**：在 `.env` 中设置 `PAYMENT_PROVIDERS=alipay,wechat` 并填入商户参数。回调地址为 `{BASE_URL}/api/notify/alipay` 和 `{BASE_URL}/api/notify/wechat`，必须是公网 HTTPS。
-   - 支付宝：开通「当面付」，使用 RSA2 密钥（应用私钥 + 支付宝公钥）。
-   - 微信：开通 Native 支付，配置 APIv3 密钥、商户 API 证书私钥和序列号，以及微信支付公钥（或平台证书公钥）。
+1. **支付**：支付宝、微信都通过**易支付 V2** 收款（同一个易支付商户，下单时支付方式不同）。
+   - 在易支付商户后台 → 个人资料 → API 信息，点「生成商户RSA密钥对」，得到**商户私钥**和**平台公钥**。
+   - 在 `.env` 中填写 `EPAY_API_URL`、`EPAY_PID`、`EPAY_MERCHANT_PRIVATE_KEY`、`EPAY_PLATFORM_PUBLIC_KEY`，并设置 `PAYMENT_PROVIDERS=alipay,wechat`（可只开其中一个）。
+   - 付款通知地址自动为 `{BASE_URL}/api/notify/epay`，必须是公网可访问的地址。
 2. **上游**：
    - 已对接 aiaiyg.com：设置 `UPSTREAM_DRIVER=aiaiyg` 即可，实现见 [src/upstream/aiaiyg.ts](src/upstream/aiaiyg.ts)。这个上游需要用户的完整登录信息（session JSON，含 `sessionToken`），所以订单页会要求用户粘贴整页内容。
    - 其他上游：设置 `UPSTREAM_DRIVER=http`，然后按上游文档修改 [src/upstream/http.ts](src/upstream/http.ts)。只需把上游的响应映射成 [src/types.ts](src/types.ts) 中 `UpstreamDriver` 定义的标准结果，其中最重要的是正确区分 `cardStatus`（`UNUSED` / `INVALID` / `UNKNOWN`）。
@@ -70,7 +71,7 @@ migrations/            数据库迁移（按文件名顺序执行一次）
   worker.ts            后台任务：支付补偿查询 / 过期 / 分配卡密 / 提交上游 / 轮询结果
   ratelimit.ts         限流
   services/orders.ts   下单、支付确认、提交 Token
-  payments/            alipay.ts / wechat.ts / mock.ts
+  payments/            epay.ts（易支付，支付宝/微信共用）/ mock.ts
   upstream/            http.ts（按上游文档修改）/ mock.ts
   routes/              public.ts（前台 + 支付回调）/ admin.ts
 public/                index.html / orders.html / order.html / admin.html

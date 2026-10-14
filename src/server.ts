@@ -7,13 +7,6 @@ import { renderHome, robotsTxt, sitemapXml } from './home.ts';
 import adminRoutes from './routes/admin.ts';
 import * as worker from './worker.ts';
 
-declare module 'http' {
-  interface IncomingMessage {
-    /** 原始请求体，微信支付回调验签需要 */
-    rawBody?: string;
-  }
-}
-
 const app = express();
 app.set('trust proxy', config.trustProxy);
 app.disable('x-powered-by');
@@ -31,8 +24,6 @@ const CSP = [
   "base-uri 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // 订单页要嵌入支付宝返回的付款二维码（网关会跳到支付宝的其他子域名）
-  ...(payments.enabled.includes('alipay') ? ['frame-src https://openapi.alipay.com https://*.alipay.com'] : []),
 ].join('; ');
 
 app.use((req, res, next) => {
@@ -56,15 +47,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(
-  express.json({
-    limit: '64kb',
-    verify: (req, _res, buf) => {
-      req.rawBody = buf.toString('utf8');
-    },
-  }),
-);
-// 注意：表单（urlencoded）解析只在支付宝回调路由上启用（见 routes/public.ts），
+app.use(express.json({ limit: '64kb' }));
+// 注意：表单（urlencoded）解析只在易支付回调路由上启用（见 routes/public.ts），
 // 其他接口只接受 JSON，避免第三方网页用普通表单跨站提交。
 
 // 健康检查：进程活着且数据库可用才算健康（Docker 据此判断是否需要重启容器）

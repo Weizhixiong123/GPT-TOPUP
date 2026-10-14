@@ -34,9 +34,6 @@
     .payqr { text-align: center; }
     .payqr h2 { margin-bottom: 16px; }
     .payqr .qr img { display: block; margin: 0 auto; }
-    /* 支付宝的二维码是嵌进来的页面，外框和我们自己画的二维码保持一致 */
-    .payframe { width: 222px; height: 222px; margin: 0 auto; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-    .payframe iframe { display: block; width: 200px; height: 200px; border: 0; }
     .payqr .muted { margin: 12px 0 0; }
     .payinfo { margin: 0; padding: 0 0 0 28px; border-left: 1px solid var(--line); }
     .payinfo div + div { margin-top: 18px; }
@@ -90,11 +87,9 @@
     <div class="paygrid">
       <div class="payqr">
         <h2 id="payTitle">请扫码支付</h2>
-        <!-- 三种形态只显示一种：自己画的二维码 / 支付平台嵌进来的二维码 / 跳转按钮 -->
+        <!-- 两种形态只显示一种：二维码（扫码付款）/ 跳转按钮（打开易支付的付款页） -->
         <div class="qr"><img id="qr" alt="支付二维码"></div>
-        <div class="payframe" id="payFrameBox" hidden><iframe id="payFrame" title="支付宝付款二维码" scrolling="no"></iframe></div>
-        <a class="btn" id="payLink" rel="noopener" hidden style="padding:13px 36px;font-size:16px;margin:8px 0 4px">前往支付宝付款</a>
-        <p class="muted" id="payAlt" hidden>二维码没有显示？<a id="payAltLink" target="_blank" rel="noopener">在新窗口打开</a></p>
+        <a class="btn" id="payLink" rel="noopener" hidden style="padding:13px 36px;font-size:16px;margin:8px 0 4px">前往付款</a>
         <p class="muted" id="wechatHint" hidden>微信里无法打开支付宝。请点右上角「…」，选择「在浏览器打开」后再付款。</p>
         <p class="muted" id="mockHint" hidden>开发模式：<a id="mockLink" target="_blank">点此模拟支付</a></p>
       </div>
@@ -202,34 +197,22 @@ function render() {
       : o.pay_channel === 'wechat' ? '请使用微信扫码支付' : o.pay_channel === 'alipay' ? '请使用支付宝扫码支付' : '请扫码支付';
     $('#qr').hidden = late || !o.pay_qr_image;
     if (o.pay_qr_image && $('#qr').src !== o.pay_qr_image) $('#qr').src = o.pay_qr_image;
-    // 收银台链接：电脑上新开标签页（本页留着等结果），手机上直接跳转（便于拉起支付宝 App，付完会回到「我的订单」）
     $('#payAmount').textContent = '¥' + (o.amount_cents / 100).toFixed(2);
+    const channelName = { wechat: '微信', alipay: '支付宝', mock: '模拟支付' }[o.pay_channel] || o.pay_channel;
     $('#payChannel').textContent = { wechat: '微信支付', alipay: '支付宝', mock: '模拟支付' }[o.pay_channel] || o.pay_channel;
 
-    // 嵌入式二维码：支付平台返回的二维码小页面，直接嵌在这里。只在链接变化时才设置，轮询刷新时不能让它重新加载
-    const embed = !!o.pay_link && o.pay_embed;
-    const frame = $('#payFrame');
-    $('#payFrameBox').hidden = !embed;
-    $('#payAlt').hidden = !embed;
-    if (embed) {
-      $('#payTitle').textContent = '请使用支付宝扫码付款';
-      $('#payAltLink').href = o.pay_link;
-      if (frame.dataset.link !== o.pay_link) { frame.dataset.link = o.pay_link; frame.src = o.pay_link; }
-    } else if (frame.dataset.link) {
-      delete frame.dataset.link;
-      frame.removeAttribute('src');
-    }
-
-    // 跳转按钮：电脑上新开标签页（本页留着等结果），手机上直接跳转（便于拉起支付宝 App，付完会回到「我的订单」）
+    // 跳转按钮（付款页链接）：电脑上新开标签页（本页留着等结果），手机上直接跳转（便于拉起支付 App，付完会回到「我的订单」）
     const link = $('#payLink');
-    link.hidden = !o.pay_link || embed;
-    if (o.pay_link && !embed) {
-      if (!late) $('#payTitle').textContent = '请前往支付宝完成付款';
+    link.hidden = !o.pay_link;
+    if (o.pay_link) {
+      if (!late) $('#payTitle').textContent = `请前往${channelName}完成付款`;
+      link.textContent = `前往${channelName}付款`;
       link.href = o.pay_link;
       const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(navigator.userAgent);
       if (mobile) link.removeAttribute('target'); else link.target = '_blank';
     }
-    $('#wechatHint').hidden = !(o.pay_link && /MicroMessenger/i.test(navigator.userAgent));
+    // 只有支付宝的付款链接在微信里打不开；微信支付的链接在微信里正常
+    $('#wechatHint').hidden = !(o.pay_link && o.pay_channel === 'alipay' && /MicroMessenger/i.test(navigator.userAgent));
     if (o.pay_channel === 'mock') { $('#mockHint').hidden = late; if (!late) $('#mockLink').href = o.pay_qr; }
   }
 

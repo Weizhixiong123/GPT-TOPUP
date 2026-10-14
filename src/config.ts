@@ -94,26 +94,15 @@ const config = {
   redeemMaxSubmitRetries: num('REDEEM_MAX_SUBMIT_RETRIES', 3),
 
   payment: {
-    // mock | alipay | wechat ；可同时启用多个，逗号分隔
+    // mock（开发用模拟支付）| alipay | wechat ；可同时启用多个，逗号分隔。
+    // alipay、wechat 都通过易支付收款
     enabled: enabledChannels,
-    alipay: {
-      gateway: env('ALIPAY_GATEWAY', 'https://openapi.alipay.com/gateway.do'),
-      // 已签约的支付产品，逗号分隔：f2f 当面付（页面显示二维码）/ page 电脑网站支付 / wap 手机网站支付（后两种跳转到支付宝收银台）
-      // 同时填 page,wap 时，手机下单走 wap，电脑下单走 page
-      products: env('ALIPAY_PRODUCT', 'f2f').split(',').map((s) => s.trim()).filter(Boolean),
-      appId: env('ALIPAY_APP_ID', ''),
-      privateKey: readKey(env('ALIPAY_PRIVATE_KEY', '')),
-      alipayPublicKey: readKey(env('ALIPAY_PUBLIC_KEY', '')),
-    },
-    wechat: {
-      mchId: env('WECHAT_MCH_ID', ''),
-      appId: env('WECHAT_APP_ID', ''),
-      apiV3Key: env('WECHAT_API_V3_KEY', ''),
-      serialNo: env('WECHAT_CERT_SERIAL_NO', ''),
-      privateKey: readKey(env('WECHAT_PRIVATE_KEY', '')),
-      // 微信支付公钥（新商户）或平台证书公钥，用于验签回调
-      platformPublicKey: readKey(env('WECHAT_PLATFORM_PUBLIC_KEY', '')),
-      platformPublicKeyId: env('WECHAT_PLATFORM_PUBLIC_KEY_ID', ''),
+    // 易支付 V2（RSA 签名）。密钥在易支付商户后台 → 个人资料 → API 信息 生成；可填文件路径或单行内容
+    epay: {
+      apiUrl: env('EPAY_API_URL', 'https://www.ezfp.cn').replace(/\/+$/, ''),
+      pid: env('EPAY_PID', ''),
+      merchantPrivateKey: readKey(env('EPAY_MERCHANT_PRIVATE_KEY', '')),
+      platformPublicKey: readKey(env('EPAY_PLATFORM_PUBLIC_KEY', '')),
     },
   },
 
@@ -156,10 +145,19 @@ try {
   );
 }
 if (!/^[a-z_][a-z0-9_]*$/.test(config.dbSchema)) throw new Error('DB_SCHEMA 只能包含小写字母、数字和下划线');
-{
-  const products = config.payment.alipay.products;
-  const bad = products.filter((p) => !['f2f', 'page', 'wap'].includes(p));
-  if (bad.length || !products.length) throw new Error(`ALIPAY_PRODUCT 只能是 f2f / page / wap（可逗号分隔多个），当前无法识别：${bad.join(', ') || '（空）'}`);
+// 启用了支付宝或微信（都走易支付）时，易支付配置必须完整
+if (config.payment.enabled.some((c) => c === 'alipay' || c === 'wechat')) {
+  const e = config.payment.epay;
+  const missing = [
+    !e.pid && 'EPAY_PID',
+    !e.merchantPrivateKey && 'EPAY_MERCHANT_PRIVATE_KEY',
+    !e.platformPublicKey && 'EPAY_PLATFORM_PUBLIC_KEY',
+  ].filter(Boolean);
+  if (missing.length) throw new Error(`已启用支付宝/微信支付（通过易支付收款），但缺少配置：${missing.join('、')}`);
+  if (!/^\d+$/.test(e.pid)) throw new Error('EPAY_PID（商户 ID）应为纯数字');
+  if (!/^https:\/\//.test(e.apiUrl) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(e.apiUrl)) {
+    throw new Error('EPAY_API_URL 必须是 https:// 开头（签名和订单数据不能走明文 HTTP）');
+  }
 }
 
 /** 对外地址是否为本机（localhost / 127.0.0.1 / ::1）。不是本机就视为对公网提供服务 */
