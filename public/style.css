@@ -201,6 +201,11 @@ main { view-transition-name: page; }
 ::view-transition-new(page) { animation: page-in .28s ease-out .06s both; }
 /* 内容区的高度每页不同，外框不做拉伸，直接用新页面的尺寸 */
 ::view-transition-group(page) { animation: none; }
+/* 各页内容区宽度也不同（首页最宽 1120px，订单页铺满整屏）。快照默认会拉伸到外框的宽度，
+   旧页面就被放大成模糊的一大片、压在新页面上。这里让新旧快照都保持原始大小、水平居中 */
+::view-transition-old(page), ::view-transition-new(page) {
+  inline-size: auto; block-size: auto; inset-inline-start: 50%; translate: -50% 0;
+}
 
 /* 导航里的那条线：位置和宽度由浏览器在新旧两处之间补出来 */
 ::view-transition-group(nav-line) { animation-duration: .42s; animation-timing-function: var(--ease-out); }
