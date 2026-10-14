@@ -208,9 +208,9 @@ main { view-transition-name: page; }
 ::view-transition-old(nav-line), ::view-transition-new(nav-line) { height: 100%; }
 
 /* 新页面的内容：标题先到，正文晚一拍。直接打开页面时也是这个出场方式 */
-.topnav ~ main > * { animation: rise .52s var(--ease-out) both; }
-.topnav ~ main > :first-child { animation-delay: .05s; }
-.topnav ~ main > :not(:first-child) { animation-delay: .13s; }
+.topnav ~ main > :not(dialog) { animation: rise .52s var(--ease-out) both; }
+.topnav ~ main > :first-child:not(dialog) { animation-delay: .05s; }
+.topnav ~ main > :not(:first-child):not(dialog) { animation-delay: .13s; }
 
 /* 之后从接口加载出来的内容（如订单详情）用同一种方式出现 */
 .fade-in { animation: rise .42s var(--ease-out) both; }
@@ -219,5 +219,5 @@ main { view-transition-name: page; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(page) { animation: page-in .15s ease reverse both; }
   ::view-transition-group(nav-line) { animation-duration: .01s; }
-  .topnav ~ main > *, .fade-in { animation: page-in .2s ease both; animation-delay: 0s; }
+  .topnav ~ main > :not(dialog), .fade-in { animation: page-in .2s ease both; animation-delay: 0s; }
 }

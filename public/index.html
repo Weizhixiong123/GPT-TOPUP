@@ -44,13 +44,8 @@
     .paydlg { width: min(420px, calc(100vw - 32px)); max-width: none; padding: 0; border: 1px solid var(--line); border-radius: 20px;
               background: var(--card); color: var(--text); box-shadow: 0 24px 60px rgba(0, 0, 0, .18); }
     .paydlg::backdrop { background: rgba(0, 0, 0, .4); }
-    /* 弹窗放在 main 里，会被全站「页面进场」动画规则命中（style.css：.topnav ~ main > *，含 0.13s 延迟），
-       那会让弹窗先完整显示、再消失、再淡入，看起来一闪。这里提高优先级，用弹窗自己的动画并去掉延迟 */
-    .topnav ~ main > .paydlg { animation: none; }
-    .topnav ~ main > .paydlg[open] { animation: dlg-in .22s var(--ease-out, ease-out) 0s both; }
-    .topnav ~ main > .paydlg[open]::backdrop { animation: dlg-fade .22s ease-out both; }
-    @keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
-    @keyframes dlg-fade { from { opacity: 0; } }
+    /* 支付选择直接显示，弹窗和遮罩都不播放入场动画，避免打开时闪烁。 */
+    .paydlg, .paydlg::backdrop { animation: none; }
     .paydlg .box { padding: 28px 28px 24px; }
     .paydlg .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
     .paydlg .head h2 { margin: 0; font-size: 16px; font-weight: 500; color: var(--text-2); }
@@ -76,9 +71,6 @@
     .paydlg .method .spinner { flex: none; width: 16px; height: 16px; margin: 0; }
     .paydlg .note { margin: 18px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
     .paydlg .err { margin: 12px 0 0; min-height: 0; text-align: center; }
-    @media (prefers-reduced-motion: reduce) {
-      .topnav ~ main > .paydlg[open], .topnav ~ main > .paydlg[open]::backdrop { animation: none; }
-    }
 
     /* 未完成订单提示 */
     .notice { margin-top: 22px; }
@@ -148,11 +140,9 @@
       .steps4 .s:nth-child(n + 3) { border-top: 1px solid var(--line); }
     }
     @media (max-width: 600px) {
-      /* 手机：弹窗改为从屏幕底部滑出的面板 */
+      /* 手机：弹窗固定在屏幕底部 */
       .paydlg { width: 100%; margin: auto 0 0; border-radius: 20px 20px 0 0; border-bottom: 0; }
       .paydlg .box { padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); }
-      .topnav ~ main > .paydlg[open] { animation: sheet-up .28s var(--ease-out, ease-out) 0s both; }
-      @keyframes sheet-up { from { transform: translateY(100%); } }
       .hero { padding: 36px 0 28px; }
       .hero h1 { font-size: 36px; margin-bottom: 12px; }
       .hero p { font-size: 15px; }
