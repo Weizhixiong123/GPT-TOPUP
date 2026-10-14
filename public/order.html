@@ -177,6 +177,25 @@ async function load() {
   if (delay) timer = setTimeout(load, delay);
 }
 
+// 易支付的页面跳转支付只认 POST 提交的签名（直接打开 GET 链接会报「RSA签名校验失败」），
+// 所以这类链接不直接跳转，而是把参数放进表单 POST 过去
+const isPostPayLink = (link) => URL.canParse(link) && /\/api\/pay\/submit$/.test(new URL(link).pathname);
+function submitPayLink(link, target) {
+  const url = new URL(link);
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url.origin + url.pathname;
+  if (target) form.target = target;
+  for (const [k, v] of url.searchParams) {
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = k; input.value = v;
+    form.append(input);
+  }
+  document.body.append(form);
+  form.submit();
+  form.remove();
+}
+
 function render() {
   const o = order;
   // 第一次读到订单：收起加载提示，内容淡入。之后的轮询刷新不再重复这个动画
@@ -214,9 +233,13 @@ function render() {
       link.href = o.pay_link;
       link.removeAttribute('target');
     }
+    const postLink = !!o.pay_link && isPostPayLink(o.pay_link);
+    link.onclick = linkButton && postLink ? (e) => { e.preventDefault(); submitPayLink(o.pay_link); } : null;
     // 电脑：二维码下方给一个备用入口，新开标签页打开付款页（本页留着等结果）
     $('#payAlt').hidden = !(o.pay_link && !mobile && !late);
     if (o.pay_link && !mobile) $('#payAltLink').href = o.pay_link;
+    // 电脑上的备用入口同理（如在手机下单、到电脑上打开订单）
+    $('#payAltLink').onclick = !mobile && postLink ? (e) => { e.preventDefault(); submitPayLink(o.pay_link, '_blank'); } : null;
     // 只有支付宝的付款链接在微信里打不开；微信支付的链接在微信里正常
     $('#wechatHint').hidden = !(o.pay_link && o.pay_channel === 'alipay' && /MicroMessenger/i.test(navigator.userAgent));
     if (o.pay_channel === 'mock') { $('#mockHint').hidden = late; if (!late) $('#mockLink').href = o.pay_qr; }

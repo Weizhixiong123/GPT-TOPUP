@@ -22,7 +22,8 @@ const CSP = [
   "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",
-  "form-action 'self'",
+  // 不限制 form-action：手机付款要用表单 POST 提交到易支付，之后还会再跳到支付宝 / 微信（含 alipays:// 等 App 链接），
+  // 浏览器对表单提交后的每一次跳转都套用 form-action，无法逐个列全。页面跳转本身 CSP 也拦不住，放开它损失不大
   "frame-ancestors 'none'",
 ].join('; ');
 
