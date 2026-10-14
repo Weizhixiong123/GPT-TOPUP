@@ -134,10 +134,14 @@ export function createEpayProvider(name: Extract<PayChannel, 'alipay' | 'wechat'
         money: yuan(amountCents),
         clientip: clientIp || '127.0.0.1',
       };
-      // 通用网页支付：电脑上平台一般返回二维码，手机上返回跳转链接（直接拉起支付 App）
-      let r = await call('/api/pay/create', { ...base, method: 'web', device: mobile ? 'mobile' : 'pc' });
+      // 手机：用「跳转支付」，平台只返回一个付款链接。用户在手机上打开后，由平台按真实的手机环境
+      // 决定走支付宝 / 微信 H5 还是收银台（易支付文档推荐的做法）。
+      // 不用 web + device=mobile：实测这个商户的通道对它返回「系统异常无法完成付款」，
+      // 而失败后再用同一个订单号重下，平台可能当作重复订单拒绝，所以手机上直接走 jump。
+      // 电脑：通用网页支付，平台返回二维码内容或付款页链接（页面上都会画成二维码）
+      let r = await call('/api/pay/create', mobile ? { ...base, method: 'jump' } : { ...base, method: 'web', device: 'pc' });
       // 返回的是我们无法直接展示的形式（如 html 表单），改用只返回跳转链接的方式再下一次
-      if (Number(r.code) === 0 && !['qrcode', 'jump', 'urlscheme'].includes(String(r.pay_type))) {
+      if (!mobile && Number(r.code) === 0 && !['qrcode', 'jump', 'urlscheme'].includes(String(r.pay_type))) {
         r = await call('/api/pay/create', { ...base, method: 'jump' });
       }
       if (Number(r.code) !== 0 || !r.pay_info) throw new Error(`易支付下单失败: ${r.msg || `code=${r.code}`}`);
