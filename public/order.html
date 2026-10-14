@@ -87,9 +87,10 @@
     <div class="paygrid">
       <div class="payqr">
         <h2 id="payTitle">请扫码支付</h2>
-        <!-- 两种形态只显示一种：二维码（扫码付款）/ 跳转按钮（打开易支付的付款页） -->
+        <!-- 电脑上显示二维码（付款页链接也画成二维码）；手机上付款页链接改为跳转按钮 -->
         <div class="qr"><img id="qr" alt="支付二维码"></div>
         <a class="btn" id="payLink" rel="noopener" hidden style="padding:13px 36px;font-size:16px;margin:8px 0 4px">前往付款</a>
+        <p class="muted" id="payAlt" hidden>扫不了码？<a id="payAltLink" target="_blank" rel="noopener">在浏览器中打开付款页</a></p>
         <p class="muted" id="wechatHint" hidden>微信里无法打开支付宝。请点右上角「…」，选择「在浏览器打开」后再付款。</p>
         <p class="muted" id="mockHint" hidden>开发模式：<a id="mockLink" target="_blank">点此模拟支付</a></p>
       </div>
@@ -195,22 +196,27 @@ function render() {
     const late = !o.pay_qr_image && !o.pay_link;
     $('#payTitle').textContent = late ? '支付已超时，正在确认是否已付款…'
       : o.pay_channel === 'wechat' ? '请使用微信扫码支付' : o.pay_channel === 'alipay' ? '请使用支付宝扫码支付' : '请扫码支付';
-    $('#qr').hidden = late || !o.pay_qr_image;
+    const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(navigator.userAgent);
+    // 付款页链接在手机上不显示二维码（没法用这台手机扫自己的屏幕），改为跳转按钮
+    const linkButton = !!o.pay_link && mobile;
+    $('#qr').hidden = late || !o.pay_qr_image || linkButton;
     if (o.pay_qr_image && $('#qr').src !== o.pay_qr_image) $('#qr').src = o.pay_qr_image;
     $('#payAmount').textContent = '¥' + (o.amount_cents / 100).toFixed(2);
     const channelName = { wechat: '微信', alipay: '支付宝', mock: '模拟支付' }[o.pay_channel] || o.pay_channel;
     $('#payChannel').textContent = { wechat: '微信支付', alipay: '支付宝', mock: '模拟支付' }[o.pay_channel] || o.pay_channel;
 
-    // 跳转按钮（付款页链接）：电脑上新开标签页（本页留着等结果），手机上直接跳转（便于拉起支付 App，付完会回到「我的订单」）
+    // 手机：跳转按钮，直接跳转（便于拉起支付 App，付完会回到「我的订单」）
     const link = $('#payLink');
-    link.hidden = !o.pay_link;
-    if (o.pay_link) {
+    link.hidden = !linkButton;
+    if (linkButton) {
       if (!late) $('#payTitle').textContent = `请前往${channelName}完成付款`;
       link.textContent = `前往${channelName}付款`;
       link.href = o.pay_link;
-      const mobile = /Mobile|Android|iPhone|iPad|HarmonyOS/i.test(navigator.userAgent);
-      if (mobile) link.removeAttribute('target'); else link.target = '_blank';
+      link.removeAttribute('target');
     }
+    // 电脑：二维码下方给一个备用入口，新开标签页打开付款页（本页留着等结果）
+    $('#payAlt').hidden = !(o.pay_link && !mobile && !late);
+    if (o.pay_link && !mobile) $('#payAltLink').href = o.pay_link;
     // 只有支付宝的付款链接在微信里打不开；微信支付的链接在微信里正常
     $('#wechatHint').hidden = !(o.pay_link && o.pay_channel === 'alipay' && /MicroMessenger/i.test(navigator.userAgent));
     if (o.pay_channel === 'mock') { $('#mockHint').hidden = late; if (!late) $('#mockLink').href = o.pay_qr; }

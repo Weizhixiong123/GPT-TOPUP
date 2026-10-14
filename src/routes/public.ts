@@ -91,7 +91,9 @@ router.get(
     let order = await orders.getForUser(no, key);
     order = await orders.syncPayment(order);
     const view = orders.publicView(order);
+    // 二维码内容直接画成二维码；付款页链接也画一份，电脑上让用户扫码打开（手机上页面改为显示跳转按钮）
     if (view.pay_qr) view.pay_qr_image = await qrImage(view.pay_qr);
+    else if (view.pay_link) view.pay_qr_image = await qrImage(view.pay_link);
     res.json(view);
   }),
 );
