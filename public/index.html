@@ -40,27 +40,45 @@
     .hero h1 { font-size: 56px; font-weight: 300; line-height: 1.12; margin: 0 0 16px; letter-spacing: -.02em; }
     .hero p { margin: 0; color: var(--text-2); font-size: 17px; }
 
-    /* 选择支付方式的弹窗：点套餐按钮后出现 */
-    .paydlg { width: min(400px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--card); color: var(--text); }
-    .paydlg::backdrop { background: rgba(0, 0, 0, .45); }
-    .paydlg[open] { animation: dlg-in .18s ease-out; }
-    @keyframes dlg-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
-    .paydlg .box { padding: 26px 24px 22px; }
-    .paydlg .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .paydlg .head h2 { margin: 0; font-size: 19px; font-weight: 600; }
-    .paydlg .head .amount { margin-top: 4px; font-family: var(--num); font-size: 30px; font-weight: 500; font-variant-numeric: tabular-nums; }
-    .paydlg .close { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; }
+    /* 选择支付方式的弹窗：点套餐按钮后出现。和套餐卡片同一套风格：白底细边，品牌色只用在小图标上 */
+    .paydlg { width: min(420px, calc(100vw - 32px)); max-width: none; padding: 0; border: 1px solid var(--line); border-radius: 20px;
+              background: var(--card); color: var(--text); box-shadow: 0 24px 60px rgba(0, 0, 0, .18); }
+    .paydlg::backdrop { background: rgba(0, 0, 0, .4); }
+    /* 弹窗放在 main 里，会被全站「页面进场」动画规则命中（style.css：.topnav ~ main > *，含 0.13s 延迟），
+       那会让弹窗先完整显示、再消失、再淡入，看起来一闪。这里提高优先级，用弹窗自己的动画并去掉延迟 */
+    .topnav ~ main > .paydlg { animation: none; }
+    .topnav ~ main > .paydlg[open] { animation: dlg-in .22s var(--ease-out, ease-out) 0s both; }
+    .topnav ~ main > .paydlg[open]::backdrop { animation: dlg-fade .22s ease-out both; }
+    @keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+    @keyframes dlg-fade { from { opacity: 0; } }
+    .paydlg .box { padding: 28px 28px 24px; }
+    .paydlg .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .paydlg .head h2 { margin: 0; font-size: 16px; font-weight: 500; color: var(--text-2); }
+    .paydlg .head .amount { margin-top: 6px; font-family: var(--num); font-size: 40px; font-weight: 500; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums lining-nums; }
+    .paydlg .head .amount small { font-size: 20px; opacity: .6; margin-right: 2px; }
+    .paydlg .close { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; }
     .paydlg .close:hover { background: var(--soft); color: var(--text); }
-    .paydlg .label { margin: 20px 0 10px; color: var(--text-2); font-size: 14px; }
+    .paydlg .label { margin: 20px 0 12px; font-size: 14px; font-weight: 500; }
     .paydlg .methods { display: grid; gap: 10px; }
-    .paydlg .method { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px; border: 0; border-radius: 12px; font-size: 16px; font-weight: 600; color: #fff; }
-    .paydlg .method svg { width: 22px; height: 22px; }
-    .paydlg .method.alipay { background: #1677ff; }
-    .paydlg .method.wechat { background: #07c160; }
-    .paydlg .method.mock { background: #6b7280; }
-    .paydlg .method:hover:not(:disabled) { filter: brightness(1.06); }
-    .paydlg .method:disabled { opacity: .55; cursor: progress; }
+    .paydlg .method { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px;
+                      background: var(--card); color: var(--text); font-size: 16px; font-weight: 500; text-align: left; transition: border-color .15s, background .15s; }
+    .paydlg .method:hover:not(:disabled) { border-color: var(--text-2); background: var(--card); }
+    .paydlg .method:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+    .paydlg .method:disabled { opacity: 1; cursor: progress; }
+    .paydlg .method:disabled:not(.loading) { opacity: .45; }
+    .paydlg .method .ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: #fff; }
+    .paydlg .method .ico svg { width: 22px; height: 22px; }
+    .paydlg .method.alipay .ico { background: #1677ff; }
+    .paydlg .method.wechat .ico { background: #07c160; }
+    .paydlg .method.mock .ico { background: #6b7280; }
+    .paydlg .method .name { flex: 1; }
+    .paydlg .method .chev { flex: none; width: 18px; height: 18px; color: var(--muted); }
+    .paydlg .method .spinner { flex: none; width: 16px; height: 16px; margin: 0; }
+    .paydlg .note { margin: 18px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
     .paydlg .err { margin: 12px 0 0; min-height: 0; text-align: center; }
+    @media (prefers-reduced-motion: reduce) {
+      .topnav ~ main > .paydlg[open], .topnav ~ main > .paydlg[open]::backdrop { animation: none; }
+    }
 
     /* 未完成订单提示 */
     .notice { margin-top: 22px; }
@@ -130,6 +148,11 @@
       .steps4 .s:nth-child(n + 3) { border-top: 1px solid var(--line); }
     }
     @media (max-width: 600px) {
+      /* 手机：弹窗改为从屏幕底部滑出的面板 */
+      .paydlg { width: 100%; margin: auto 0 0; border-radius: 20px 20px 0 0; border-bottom: 0; }
+      .paydlg .box { padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); }
+      .topnav ~ main > .paydlg[open] { animation: sheet-up .28s var(--ease-out, ease-out) 0s both; }
+      @keyframes sheet-up { from { transform: translateY(100%); } }
       .hero { padding: 36px 0 28px; }
       .hero h1 { font-size: 36px; margin-bottom: 12px; }
       .hero p { font-size: 15px; }
@@ -191,9 +214,10 @@
         <div><h2 id="payDlgTitle"></h2><div class="amount" id="payDlgAmount"></div></div>
         <button class="close" type="button" id="payDlgClose" aria-label="关闭">×</button>
       </div>
-      <p class="label">请选择支付方式</p>
+      <p class="label">选择支付方式</p>
       <div class="methods" id="payMethods"></div>
       <p class="err" id="payErr"></p>
+      <p class="note">付款后自动充值，通常 1 分钟到账</p>
     </div>
   </dialog>
 </main>
@@ -217,6 +241,7 @@ definePage('/', (page) => {
   const { plans, channels } = JSON.parse($('#home-data').textContent || '{"plans":[],"channels":[]}');
 
   // ---------- 选择支付方式的弹窗 ----------
+  const CHEV = '<svg class="chev" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const dlg = $('#payDlg');
   let busy = false;
   $('#payDlgClose').onclick = () => !busy && dlg.close();
@@ -228,7 +253,7 @@ definePage('/', (page) => {
     // 只开了一种支付方式：没有可选的，直接下单
     if (channels.length === 1) return buy(plan, short, channels[0].name, null);
     $('#payDlgTitle').textContent = plan.name;
-    $('#payDlgAmount').textContent = '¥' + yuan(plan.price_cents);
+    $('#payDlgAmount').innerHTML = `<small>¥</small>${esc(yuan(plan.price_cents))}`;
     $('#payErr').textContent = '';
     const box = $('#payMethods');
     box.replaceChildren();
@@ -236,7 +261,7 @@ definePage('/', (page) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = `method ${c.name}`;
-      b.innerHTML = `${ICONS[c.name] || ICONS.mock}<span>${esc(c.label)}</span>`;
+      b.innerHTML = `<span class="ico">${ICONS[c.name] || ICONS.mock}</span><span class="name">${esc(c.label)}</span>${CHEV}`;
       b.onclick = () => buy(plan, short, c.name, b);
       box.appendChild(b);
     }
@@ -265,12 +290,15 @@ definePage('/', (page) => {
     if (busy) return;
     busy = true;
     const errEl = methodBtn ? $('#payErr') : $('#err');
-    const label = methodBtn?.querySelector('span');
+    const label = methodBtn?.querySelector('.name');
     const prevLabel = label?.textContent;
     errEl.textContent = '';
     if (methodBtn) {
+      // 被点的那一行显示「正在创建订单…」和转圈，其余选项变淡
       $('#payMethods').querySelectorAll('button').forEach((b) => (b.disabled = true));
+      methodBtn.classList.add('loading');
       label.textContent = '正在创建订单…';
+      methodBtn.querySelector('.chev')?.replaceWith(Object.assign(document.createElement('span'), { className: 'spinner' }));
     }
     try {
       // 同一套餐 + 支付方式已有未过期的待支付订单时，直接回到该订单，避免重复下单
@@ -299,6 +327,9 @@ definePage('/', (page) => {
       errEl.textContent = e.message;
       if (methodBtn) {
         label.textContent = prevLabel;
+        methodBtn.classList.remove('loading');
+        methodBtn.querySelector('.spinner')?.insertAdjacentHTML('afterend', CHEV);
+        methodBtn.querySelector('.spinner')?.remove();
         $('#payMethods').querySelectorAll('button').forEach((b) => (b.disabled = false));
       }
       busy = false;
