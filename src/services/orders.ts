@@ -304,7 +304,8 @@ interface Credential {
  */
 function parseCredential(raw: unknown): Credential {
   const text = String(raw ?? '').trim();
-  if (text.length < 20 || text.length > 32768) throw new HttpError(400, 'Token 格式不正确');
+  // session 整页 JSON 里有大段与登录无关的追踪配置（marketingEligibility 等），实测已超过 3.2 万字符，上限留足余量
+  if (text.length < 20 || text.length > 100_000) throw new HttpError(400, 'Token 格式不正确');
 
   if (text.startsWith('{')) {
     let json: { accessToken?: unknown; sessionToken?: unknown; user?: { email?: unknown } };

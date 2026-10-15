@@ -48,7 +48,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '64kb' }));
+// 提交 Token 时可能带整段 session JSON（最长 10 万字符，含中文时字节数更多），请求体上限按此留足
+app.use(express.json({ limit: '256kb' }));
 // 注意：表单（urlencoded）解析只在易支付回调路由上启用（见 routes/public.ts），
 // 其他接口只接受 JSON，避免第三方网页用普通表单跨站提交。
 
