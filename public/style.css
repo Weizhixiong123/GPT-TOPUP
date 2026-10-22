@@ -50,17 +50,8 @@ textarea, input, select {
 textarea:focus, input:focus, select:focus { border-color: var(--text-2); }
 textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; resize: vertical; }
 
-.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.row > * { flex: 1; }
 .center { text-align: center; }
-.qr img { width: 232px; height: 232px; border-radius: 12px; background: #fff; padding: 10px; border: 1px solid var(--line); }
 .status { font-size: 22px; font-weight: 600; }
-
-.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: var(--soft); color: var(--text-2); white-space: nowrap; }
-.s-SUCCESS { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
-.s-FAILED, .s-EXPIRED { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
-.s-MANUAL_REVIEW { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
-.s-QUEUED, .s-REDEEMING, .s-PAID { background: color-mix(in srgb, var(--info) 12%, transparent); color: var(--info); }
 
 .err { color: var(--danger); font-size: 14px; min-height: 20px; margin-top: 8px; }
 .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -3px; margin-right: 8px; }
@@ -72,9 +63,6 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--text-2); font-weight: 500; }
 .table-wrap { overflow-x: auto; }
-.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.tabs button { background: transparent; color: var(--text); border-color: var(--line); }
-.tabs button.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
 code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; word-break: break-all; }
 details summary { cursor: pointer; }
 
@@ -82,20 +70,13 @@ details summary { cursor: pointer; }
 .steps .on { color: var(--text); font-weight: 600; }
 
 /* 顶部导航 */
-.nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: saturate(180%) blur(12px); }
-.nav .inner { max-width: 1120px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
-.nav .logo { font-weight: 600; font-size: 17px; text-decoration: none; letter-spacing: -.01em; }
 .logo { display: inline-flex; align-items: center; gap: 8px; color: var(--text); white-space: nowrap; }
 .brand-icon { display: block; width: 28px; height: 28px; flex: none; background-color: currentColor;
   -webkit-mask: url('/brand/gptsuchong-logo.svg') center / contain no-repeat;
   mask: url('/brand/gptsuchong-logo.svg') center / contain no-repeat; }
 .logo:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; border-radius: 4px; }
-.nav a.link { font-size: 14px; color: var(--text-2); text-decoration: none; padding: 6px 12px; border-radius: 999px; }
-.nav a.link:hover { background: var(--soft); color: var(--text); }
 
-.footer { max-width: 1120px; margin: 0 auto; padding: 32px 20px 40px; font-size: 12px; color: var(--muted); text-align: center; }
-
-/* ===== 站点外壳：近白底 + 顶部一层很淡的冷色光 + 透明导航（首页 / 我的订单 / 订单页共用）===== */
+/* ===== 站点外壳：近白底 + 顶部一层很淡的冷色光 + 透明导航（兑换页 / 充值进度页共用）===== */
 :root {
   --glow: radial-gradient(65% 100% at 50% 0%, rgba(96, 120, 255, .11) 0%, transparent 72%);
   --shadow: 0 1px 2px rgba(20, 20, 16, .04), 0 6px 20px rgba(20, 20, 16, .05);
@@ -114,13 +95,7 @@ details summary { cursor: pointer; }
 .topnav.scrolled { background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: saturate(180%) blur(14px); border-bottom-color: var(--line); }
 .topnav .container { height: 64px; display: flex; align-items: center; justify-content: space-between; }
 .topnav .logo { font-size: 20px; font-weight: 600; text-decoration: none; letter-spacing: -.01em; }
-.topnav nav { display: flex; gap: 28px; height: 100%; }
-.topnav nav a { position: relative; display: flex; align-items: center; font-size: 15px; font-weight: 500; color: var(--text-2); text-decoration: none; transition: color .15s; }
-.topnav nav a:hover { color: var(--text); }
-.topnav nav a.active { color: var(--text); }
 /* 表示「当前页」的那条线。每个导航项里都有一个，只有当前项的显示出来 */
-.topnav nav a i { display: none; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--text); }
-.topnav nav a.active i { display: block; }
 
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 28px 0 36px; }
 .page-title { text-align: center; padding: 40px 0 28px; }
@@ -128,8 +103,6 @@ details summary { cursor: pointer; }
 .page-title p { margin: 0; color: var(--text-2); font-size: 16px; }
 @media (max-width: 600px) {
   .container { padding: 0 16px; }
-  .topnav nav { gap: 16px; }
-  .topnav nav a { font-size: 14px; }
   .topnav .logo { font-size: 17px; }
   .logo { gap: 6px; }
   .brand-icon { width: 24px; height: 24px; }
@@ -186,7 +159,6 @@ details summary { cursor: pointer; }
 main { view-transition-name: page; }
 .topnav { view-transition-name: topnav; }
 .sp-fab { view-transition-name: support-fab; }
-.topnav nav a.active i { view-transition-name: nav-line; }
 
 :root {
   --ease-out: cubic-bezier(.22, .68, .2, 1);
@@ -208,9 +180,7 @@ main { view-transition-name: page; }
 }
 
 /* 导航里的那条线：位置和宽度由浏览器在新旧两处之间补出来 */
-::view-transition-group(nav-line) { animation-duration: .42s; animation-timing-function: var(--ease-out); }
 /* 新旧两条线颜色相同，让它们都铺满正在移动的外框，避免按原始比例缩放时变粗变细 */
-::view-transition-old(nav-line), ::view-transition-new(nav-line) { height: 100%; }
 
 /* 新页面的内容：标题先到，正文晚一拍。直接打开页面时也是这个出场方式 */
 .topnav ~ main > :not(dialog) { animation: rise .52s var(--ease-out) both; }
@@ -223,6 +193,5 @@ main { view-transition-name: page; }
 /* 用户在系统里选择了「减少动态效果」时：只保留淡入淡出，去掉所有位移 */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(page) { animation: page-in .15s ease reverse both; }
-  ::view-transition-group(nav-line) { animation-duration: .01s; }
   .topnav ~ main > :not(dialog), .fade-in { animation: page-in .2s ease both; animation-delay: 0s; }
 }

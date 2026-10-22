@@ -1,4 +1,4 @@
-// 联系客服：右下角悬浮按钮，点击后从右侧滑出小窗。首页 / 我的订单 / 订单页共用。
+// 联系客服：右下角悬浮按钮，点击后从右侧滑出小窗。
 // 联系方式由服务端 /api/support 提供（在 .env 的 SUPPORT_* 中配置），这里只负责展示。
 (() => {
   const ICON_CHAT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.7 8.7 0 0 1-3.6-.8L3 21l1.9-5.1A8.1 8.1 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/><path d="M8.5 11.5h.01M12.5 11.5h.01M16.5 11.5h.01"/></svg>';

@@ -1,7 +1,7 @@
 # Node.js 24 可以直接运行 .ts，不需要编译步骤
 FROM node:24-alpine
 
-# TZ：订单号里的时间按北京时间生成
+# TZ：日志时间按北京时间显示
 ENV NODE_ENV=production \
     TZ=Asia/Shanghai
 
@@ -13,8 +13,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY tsconfig.json ./
 COPY src ./src
-COPY migrations ./migrations
-COPY scripts ./scripts
 COPY public ./public
 
 # 不用 root 运行
